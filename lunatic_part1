@@ -1476,3 +1476,4 @@ _g.WIN_W=WIN_W; _g.WIN_H=WIN_H
 _g.ni=ni; _g.tw=tw; _g.mkCorner=mkCorner; _g.mkStroke=mkStroke; _g.mkPad=mkPad
 _g.spacer=spacer; _g.showNotif=showNotif; _g._ACTIVE_TAB=nil
 _g.getKeyName=getKeyName; _g.setWatermark=setWatermark
+_g.refreshTheme=refreshTheme
