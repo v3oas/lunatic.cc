@@ -83,6 +83,11 @@ local function refreshTheme()
     for _,ind in pairs(REG_TABINDS) do
         pcall(function() ind.BackgroundColor3=T.tabInd end)
     end
+    for _,e in ipairs(REG_COL) do
+        if e.themeKey and T[e.themeKey] then
+            pcall(function() e.setColor(T[e.themeKey]) end)
+        end
+    end
 end
 
 -- ═══════════════════════════════════════
@@ -125,61 +130,58 @@ local function buildNavLayout()
     for k in pairs(REG_TABBTNS) do REG_TABBTNS[k]=nil end
     for k in pairs(REG_TABINDS) do REG_TABINDS[k]=nil end
 
-    local mode = T.navMode or "left"
+    local mode   = T.navMode or "left"
     local isSide = (mode=="left" or mode=="right")
-    local NAV_TOP_H = 40
+    local NAV_H  = isSide and 0 or 36   -- horizontal navbar height
     local nbSz,nbPos,caSz,caPos
+
     if mode=="top" then
-        nbSz=UDim2.new(1,0,0,NAV_TOP_H);       nbPos=UDim2.new(0,0,0,0)
-        caSz=UDim2.new(1,0,1,-NAV_TOP_H);       caPos=UDim2.new(0,0,0,NAV_TOP_H)
+        nbSz=UDim2.new(1,0,0,NAV_H);    nbPos=UDim2.new(0,0,0,0)
+        caSz=UDim2.new(1,0,1,-NAV_H);   caPos=UDim2.new(0,0,0,NAV_H)
     elseif mode=="bottom" then
-        nbSz=UDim2.new(1,0,0,NAV_TOP_H);        nbPos=UDim2.new(0,0,1,-NAV_TOP_H)
-        caSz=UDim2.new(1,0,1,-NAV_TOP_H);       caPos=UDim2.new(0,0,0,0)
+        nbSz=UDim2.new(1,0,0,NAV_H);    nbPos=UDim2.new(0,0,1,-NAV_H)
+        caSz=UDim2.new(1,0,1,-NAV_H);   caPos=UDim2.new(0,0,0,0)
     elseif mode=="left" then
-        nbSz=UDim2.new(0,NAV_SIDE_W,1,0);       nbPos=UDim2.new(0,0,0,0)
-        caSz=UDim2.new(1,-NAV_SIDE_W,1,0);      caPos=UDim2.new(0,NAV_SIDE_W,0,0)
-    else -- right
-        nbSz=UDim2.new(0,NAV_SIDE_W,1,0);       nbPos=UDim2.new(1,-NAV_SIDE_W,0,0)
-        caSz=UDim2.new(1,-NAV_SIDE_W,1,0);      caPos=UDim2.new(0,0,0,0)
-    end
-
-    NavBar=ni("Frame",{Size=nbSz,Position=nbPos,BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5,ClipsDescendants=isSide},MF)
-    mkCorner(T.radius,NavBar)
-    -- fill flat inner edge so rounded corners don't bleed into content
-    local flatSz,flatPos
-    if     mode=="left"   then flatSz=UDim2.new(0.5,0,1,0); flatPos=UDim2.new(0.5,0,0,0)
-    elseif mode=="right"  then flatSz=UDim2.new(0.5,0,1,0); flatPos=UDim2.new(0,0,0,0)
-    elseif mode=="top"    then flatSz=UDim2.new(1,0,0.5,0); flatPos=UDim2.new(0,0,0.5,0)
-    else                       flatSz=UDim2.new(1,0,0.5,0); flatPos=UDim2.new(0,0,0,0) end
-    ni("Frame",{Size=flatSz,Position=flatPos,BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5},NavBar)
-
-    -- separator between nav and content
-    if isSide then
-        local xp = mode=="left" and UDim2.new(1,-1,0,0) or UDim2.new(0,0,0,0)
-        ni("Frame",{Size=UDim2.new(0,1,1,0),Position=xp,BackgroundColor3=T.sep,BorderSizePixel=0,ZIndex=6},NavBar)
+        nbSz=UDim2.new(0,NAV_SIDE_W,1,0); nbPos=UDim2.new(0,0,0,0)
+        caSz=UDim2.new(1,-NAV_SIDE_W,1,0); caPos=UDim2.new(0,NAV_SIDE_W,0,0)
     else
-        local yp = mode=="top" and UDim2.new(0,0,1,-1) or UDim2.new(0,0,0,0)
-        ni("Frame",{Size=UDim2.new(1,0,0,1),Position=yp,BackgroundColor3=T.sep,BorderSizePixel=0,ZIndex=6},NavBar)
+        nbSz=UDim2.new(0,NAV_SIDE_W,1,0); nbPos=UDim2.new(1,-NAV_SIDE_W,0,0)
+        caSz=UDim2.new(1,-NAV_SIDE_W,1,0); caPos=UDim2.new(0,0,0,0)
     end
 
-    -- mac-style close / minimize / maximize
-    local function macBtn(col,hov,pos_)
-        local b=ni("TextButton",{Size=UDim2.new(0,11,0,11),Position=pos_,BackgroundColor3=col,Text="",BorderSizePixel=0,ZIndex=10,AutoButtonColor=false},NavBar)
+    NavBar=ni("Frame",{Size=nbSz,Position=nbPos,BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5,ClipsDescendants=true},MF)
+    mkCorner(6,NavBar)
+    -- fill the inner flat edge (prevents corner bleed into content)
+    if     mode=="left"   then ni("Frame",{Size=UDim2.new(0.5,0,1,0),Position=UDim2.new(0.5,0,0,0),BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5},NavBar)
+    elseif mode=="right"  then ni("Frame",{Size=UDim2.new(0.5,0,1,0),Position=UDim2.new(0,0,0,0),  BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5},NavBar)
+    elseif mode=="top"    then ni("Frame",{Size=UDim2.new(1,0,0.5,0),Position=UDim2.new(0,0,0.5,0),BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5},NavBar)
+    else                       ni("Frame",{Size=UDim2.new(1,0,0.5,0),Position=UDim2.new(0,0,0,0),  BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5},NavBar) end
+    -- separator
+    if isSide then
+        ni("Frame",{Size=UDim2.new(0,1,1,0),Position=mode=="left" and UDim2.new(1,-1,0,0) or UDim2.new(0,0,0,0),BackgroundColor3=T.sep,BorderSizePixel=0,ZIndex=6},NavBar)
+    else
+        ni("Frame",{Size=UDim2.new(1,0,0,1),Position=mode=="top" and UDim2.new(0,0,1,-1) or UDim2.new(0,0,0,0),BackgroundColor3=T.sep,BorderSizePixel=0,ZIndex=6},NavBar)
+    end
+
+    -- mac traffic-light buttons (always present, position adapts)
+    local macCY = isSide and 9 or (NAV_H/2-5)
+    local function macBtn(col,hov,xOff)
+        local b=ni("TextButton",{Size=UDim2.new(0,11,0,11),Position=UDim2.new(0,xOff,0,macCY),BackgroundColor3=col,Text="",BorderSizePixel=0,ZIndex=10,AutoButtonColor=false},NavBar)
         mkCorner(6,b)
         b.MouseEnter:Connect(function() tw(b,{BackgroundColor3=hov},0.07) end)
         b.MouseLeave:Connect(function() tw(b,{BackgroundColor3=col},0.07) end)
         return b
     end
-    local crBtn=macBtn(Color3.fromRGB(255,88,78),Color3.fromRGB(210,48,38),UDim2.new(0,8,0,9))
-    local mgBtn=macBtn(Color3.fromRGB(255,198,38),Color3.fromRGB(210,153,12),UDim2.new(0,22,0,9))
-    local mxBtn=macBtn(Color3.fromRGB(48,208,78),Color3.fromRGB(24,166,48),UDim2.new(0,36,0,9))
+    local crBtn=macBtn(Color3.fromRGB(255,88,78),Color3.fromRGB(210,48,38),8)
+    local mgBtn=macBtn(Color3.fromRGB(255,198,38),Color3.fromRGB(210,153,12),22)
+    local mxBtn=macBtn(Color3.fromRGB(48,208,78),Color3.fromRGB(24,166,48),36)
     crBtn.MouseButton1Click:Connect(function()
         tw(MF,{BackgroundTransparency=1},0.2); task.delay(0.22,function() SGui:Destroy() end)
     end)
     local isMin,isMax=false,false; local sSz,sPs=MF.Size,MF.Position
     mgBtn.MouseButton1Click:Connect(function()
         if isMin then isMin=false; tw(MF,{Size=sSz},0.25,Enum.EasingStyle.Back)
-        else isMin=true; sSz=MF.Size; tw(MF,{Size=UDim2.new(0,WIN_W,0,NAV_TOP_H+2)},0.2) end
+        else isMin=true; sSz=MF.Size; tw(MF,{Size=UDim2.new(0,WIN_W,0,(isSide and 30 or NAV_H)+2)},0.2) end
     end)
     mxBtn.MouseButton1Click:Connect(function()
         if isMax then isMax=false; tw(MF,{Size=sSz,Position=sPs},0.3,Enum.EasingStyle.Back)
@@ -188,38 +190,45 @@ local function buildNavLayout()
         end
     end)
 
-    -- brand + version
-    local brandLbl=ni("TextLabel",{Text="lunatic.cc",Font=Enum.Font.GothamBold,TextSize=11,TextColor3=T.brand,BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(1,-8,0,18),Position=UDim2.new(0,8,0,30)},NavBar)
-    table.insert(REG_TEXT,{lbl=brandLbl,role="brand"})
-    local verLbl=ni("TextLabel",{Text="v7.0",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(1,-8,0,10),Position=UDim2.new(0,8,0,50)},NavBar)
-    table.insert(REG_TEXT,{lbl=verLbl,role="dim"})
-
-    -- tab button container
-    local tabCont=ni("Frame",{BackgroundTransparency=1,ZIndex=6,Size=UDim2.new(1,0,1,-60),Position=UDim2.new(0,0,0,60)},NavBar)
-    ni("UIListLayout",{Padding=UDim.new(0,2),FillDirection=Enum.FillDirection.Vertical,HorizontalAlignment=Enum.HorizontalAlignment.Left},tabCont)
-    mkPad(5,5,0,0,tabCont)
-
-    -- content area
+    -- content area (must exist before tab buttons reference it)
     ContentArea=ni("Frame",{Size=caSz,Position=caPos,BackgroundTransparency=1,ClipsDescendants=true,ZIndex=3},MF)
     for _,name in ipairs(tabDefs) do
         if tabPages[name] then tabPages[name].pg.Parent=ContentArea end
     end
 
-    -- build tab buttons
-    for _,name in ipairs(tabDefs) do
-        local btn=ni("TextButton",{
-            Text=name,Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.tabIdle,
-            BackgroundTransparency=1,Size=UDim2.new(1,0,0,30),BorderSizePixel=0,
-            ZIndex=7,AutoButtonColor=false,TextXAlignment=Enum.TextXAlignment.Left,
-        },tabCont)
-        mkPad(14,6,0,0,btn)
-        -- indicator bar on the right edge
-        local ind=ni("Frame",{Size=UDim2.new(0,2,1,0),Position=UDim2.new(1,-2,0,0),BackgroundColor3=T.tabInd,BackgroundTransparency=1,BorderSizePixel=0,ZIndex=8},btn)
-        navTabBtns[name]=btn; navTabInds[name]=ind
-        REG_TABBTNS[name]=btn; REG_TABINDS[name]=ind
-        btn.MouseEnter:Connect(function() if _ACTIVE_TAB~=name then tw(btn,{TextColor3=T.tabHover},0.08) end end)
-        btn.MouseLeave:Connect(function() if _ACTIVE_TAB~=name then tw(btn,{TextColor3=T.tabIdle},0.08) end end)
-        btn.MouseButton1Click:Connect(function() selTab(name) end)
+    if isSide then
+        -- ── SIDE NAV ─────────────────────────────────────────────────────
+        local brandLbl=ni("TextLabel",{Text="lunatic.cc",Font=Enum.Font.GothamBold,TextSize=11,TextColor3=T.brand,BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(1,-8,0,16),Position=UDim2.new(0,8,0,30)},NavBar)
+        table.insert(REG_TEXT,{lbl=brandLbl,role="brand"})
+        local verLbl=ni("TextLabel",{Text="v7.0",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(1,-8,0,10),Position=UDim2.new(0,8,0,48)},NavBar)
+        table.insert(REG_TEXT,{lbl=verLbl,role="dim"})
+        local tabCont=ni("Frame",{BackgroundTransparency=1,ZIndex=6,Size=UDim2.new(1,0,1,-62),Position=UDim2.new(0,0,0,62)},NavBar)
+        ni("UIListLayout",{Padding=UDim.new(0,2),FillDirection=Enum.FillDirection.Vertical,HorizontalAlignment=Enum.HorizontalAlignment.Left},tabCont)
+        mkPad(5,5,0,0,tabCont)
+        for _,name in ipairs(tabDefs) do
+            local btn=ni("TextButton",{Text=name,Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.tabIdle,BackgroundTransparency=1,Size=UDim2.new(1,0,0,30),BorderSizePixel=0,ZIndex=7,AutoButtonColor=false,TextXAlignment=Enum.TextXAlignment.Left},tabCont)
+            mkPad(14,6,0,0,btn)
+            local ind=ni("Frame",{Size=UDim2.new(0,2,1,0),Position=UDim2.new(1,-2,0,0),BackgroundColor3=T.tabInd,BackgroundTransparency=1,BorderSizePixel=0,ZIndex=8},btn)
+            navTabBtns[name]=btn; navTabInds[name]=ind; REG_TABBTNS[name]=btn; REG_TABINDS[name]=ind
+            btn.MouseEnter:Connect(function() if _ACTIVE_TAB~=name then tw(btn,{TextColor3=T.tabHover},0.08) end end)
+            btn.MouseLeave:Connect(function() if _ACTIVE_TAB~=name then tw(btn,{TextColor3=T.tabIdle},0.08) end end)
+            btn.MouseButton1Click:Connect(function() selTab(name) end)
+        end
+    else
+        -- ── HORIZONTAL NAV (top / bottom) ────────────────────────────────
+        local brandLbl=ni("TextLabel",{Text="lunatic",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.brand,BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(0,50,1,0),Position=UDim2.new(0,52,0,0)},NavBar)
+        table.insert(REG_TEXT,{lbl=brandLbl,role="brand"})
+        local tabCont=ni("Frame",{BackgroundTransparency=1,ZIndex=6,Size=UDim2.new(1,-106,1,0),Position=UDim2.new(0,106,0,0)},NavBar)
+        ni("UIListLayout",{Padding=UDim.new(0,0),FillDirection=Enum.FillDirection.Horizontal,VerticalAlignment=Enum.VerticalAlignment.Center},tabCont)
+        local indPos = mode=="top" and UDim2.new(0,0,1,-2) or UDim2.new(0,0,0,0)
+        for _,name in ipairs(tabDefs) do
+            local btn=ni("TextButton",{Text=name,Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.tabIdle,BackgroundTransparency=1,Size=UDim2.new(0,72,1,0),BorderSizePixel=0,ZIndex=7,AutoButtonColor=false,TextXAlignment=Enum.TextXAlignment.Center},tabCont)
+            local ind=ni("Frame",{Size=UDim2.new(1,0,0,2),Position=indPos,BackgroundColor3=T.tabInd,BackgroundTransparency=1,BorderSizePixel=0,ZIndex=8},btn)
+            navTabBtns[name]=btn; navTabInds[name]=ind; REG_TABBTNS[name]=btn; REG_TABINDS[name]=ind
+            btn.MouseEnter:Connect(function() if _ACTIVE_TAB~=name then tw(btn,{TextColor3=T.tabHover},0.08) end end)
+            btn.MouseLeave:Connect(function() if _ACTIVE_TAB~=name then tw(btn,{TextColor3=T.tabIdle},0.08) end end)
+            btn.MouseButton1Click:Connect(function() selTab(name) end)
+        end
     end
 
     local prevTab=_ACTIVE_TAB; _ACTIVE_TAB=nil
@@ -426,7 +435,7 @@ local function cbColRow(parent,label,default,defCol,onTog,onCol)
     return f
 end
 
-local function colRow(parent,label,defCol,onChange)
+local function colRow(parent,label,defCol,onChange,themeKey_)
     local cur=defCol or T.accent
     local f=ni("Frame",{Size=UDim2.new(1,0,0,24),BackgroundTransparency=1},parent)
     local lbl=ni("TextLabel",{Text=label,Font=Enum.Font.Gotham,TextSize=11,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(1,-26,1,0),TextXAlignment=Enum.TextXAlignment.Left},f)
@@ -435,7 +444,7 @@ local function colRow(parent,label,defCol,onChange)
     ni("TextButton",{Text="",BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=2},cube).MouseButton1Click:Connect(function()
         openColorPicker(cube,cur,function(c) cur=c; cube.BackgroundColor3=c; if onChange then onChange(c) end end)
     end)
-    local entry={cube=cube,getColor=function() return cur end,setColor=function(c) cur=c; cube.BackgroundColor3=c end,onChange=onChange}
+    local entry={cube=cube,getColor=function() return cur end,setColor=function(c) cur=c; cube.BackgroundColor3=c end,onChange=onChange,themeKey=themeKey_}
     table.insert(REG_COL,entry); return f
 end
 
@@ -706,6 +715,14 @@ local function buildVisuals()
     spacer(R,4)
     secHdr(R,"watermark")
     cbRow(R,"show watermark",false,function(v) if setWatermark then setWatermark(v) end end)
+    colRow(R,"watermark color",T.brand,function(c)
+        -- recolor all text in the watermark frame to chosen color
+        if WMFrame then
+            for _,l in ipairs(WMFrame:GetDescendants()) do
+                if l:IsA("TextLabel") then l.TextColor3=c end
+            end
+        end
+    end)
     ni("TextLabel",{Text="format:  lunatic.cc ♥ | live | gamename\ndraggable — click and drag to reposition",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,24),TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left},R)
     spacer(R,2)
     secHdr(R,"hit notifs")
@@ -724,7 +741,22 @@ local function buildMod()
     spacer(L,2)
     secHdr(L,"cframe fly")
     ni("TextLabel",{Text="WASD+camera to fly • Space=up • Ctrl=down",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,14),TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left},L)
-    cbRow(L,"enabled",false,function(v) CFrameFly.Enabled=v end,cffKB)
+    -- BodyVelocity patch: prevents gravity accumulating while flying
+    local _flyBV=nil
+    local function setFlyPhysics(on)
+        local c=LP.Character; local root=c and c:FindFirstChild("HumanoidRootPart")
+        if on and root then
+            if _flyBV then _flyBV:Destroy() end
+            _flyBV=Instance.new("BodyVelocity"); _flyBV.Velocity=Vector3.new(0,0,0)
+            _flyBV.MaxForce=Vector3.new(0,math.huge,0); _flyBV.P=5e4; _flyBV.Parent=root
+        else
+            if _flyBV then _flyBV:Destroy(); _flyBV=nil end
+        end
+    end
+    LP.CharacterAdded:Connect(function(c)
+        task.wait(0.1); if CFrameFly.Enabled then setFlyPhysics(true) end
+    end)
+    cbRow(L,"enabled",false,function(v) CFrameFly.Enabled=v; setFlyPhysics(v) end,cffKB)
     sldRow(L,"speed",10,1000,80,nil,function(v) CFrameFly.Speed=v end)
     spacer(L,2)
     secHdr(L,"velocity fly (legacy)")
@@ -814,17 +846,22 @@ local function buildPlayers()
     local specBtn=ni("TextButton",{Text="spectate",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.text,BackgroundColor3=T.accentDim,BorderSizePixel=0,Size=UDim2.new(0,62,1,0),AutoButtonColor=false},actionRow); mkCorner(4,specBtn)
     local unspecBtn=ni("TextButton",{Text="unspectate",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.text,BackgroundColor3=Color3.fromRGB(38,25,62),BorderSizePixel=0,Size=UDim2.new(0,78,1,0),AutoButtonColor=false},actionRow); mkCorner(4,unspecBtn)
     local flingBtn=ni("TextButton",{Text="fling",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.text,BackgroundColor3=Color3.fromRGB(115,25,25),BorderSizePixel=0,Size=UDim2.new(0,40,1,0),AutoButtonColor=false},actionRow); mkCorner(4,flingBtn)
-    local _specConn=nil; local _specScrollConn=nil; local _specDist=12
+    local _specConn=nil; local _specScrollConn=nil
+    local _specDist=12; local _specYaw=0; local _specPitch=20
     specBtn.MouseButton1Click:Connect(function()
         if not selPl or not selPl.Character then return end
         if _specConn then _specConn:Disconnect(); _specConn=nil end
         if _specScrollConn then _specScrollConn:Disconnect(); _specScrollConn=nil end
+        _specYaw=0; _specPitch=20
         Cam.CameraType=Enum.CameraType.Scriptable
-        UserInputService.MouseBehavior=Enum.MouseBehavior.Default
-        -- scroll wheel zooms during spectate
+        -- lock centre so mouse delta = look direction
+        UserInputService.MouseBehavior=Enum.MouseBehavior.LockCenter
         _specScrollConn=UserInputService.InputChanged:Connect(function(i)
             if i.UserInputType==Enum.UserInputType.MouseWheel then
                 _specDist=math.clamp(_specDist-i.Position.Z*2,2,80)
+            elseif i.UserInputType==Enum.UserInputType.MouseMovement then
+                _specYaw  =_specYaw  - i.Delta.X*0.3
+                _specPitch=math.clamp(_specPitch+i.Delta.Y*0.3,-75,75)
             end
         end)
         _specConn=RunService.RenderStepped:Connect(function()
@@ -836,8 +873,10 @@ local function buildPlayers()
             end
             local r=selPl.Character:FindFirstChild("HumanoidRootPart")
             if r then
-                local offset=Vector3.new(0,_specDist*0.33,-_specDist)
-                Cam.CFrame=CFrame.new(r.CFrame*offset,r.Position+Vector3.new(0,1.5,0))
+                local rot=CFrame.Angles(0,math.rad(_specYaw),0)*CFrame.Angles(math.rad(-_specPitch),0,0)
+                local offset=rot*Vector3.new(0,0,_specDist)
+                local lookAt=r.Position+Vector3.new(0,1.5,0)
+                Cam.CFrame=CFrame.new(lookAt+offset,lookAt)
             end
         end)
     end)
@@ -846,9 +885,8 @@ local function buildPlayers()
         if _specScrollConn then _specScrollConn:Disconnect(); _specScrollConn=nil end
         local c=LP.Character; local hum=c and c:FindFirstChild("Humanoid")
         Cam.CameraType=Enum.CameraType.Custom; if hum then Cam.CameraSubject=hum end
-        -- restore cursor properly
+        -- release mouse lock - game camera script will take over properly
         UserInputService.MouseBehavior=Enum.MouseBehavior.Default
-        task.defer(function() UserInputService.MouseBehavior=Enum.MouseBehavior.Default end)
     end)
     flingBtn.MouseButton1Click:Connect(function()
         if not selPl or not selPl.Character then return end
@@ -951,11 +989,11 @@ local function buildOptions()
     sldRow(L,"blur",0,24,8,nil,function(v) T.blurAmt=v; blurFX.Size=v end)
     spacer(L,2)
     secHdr(L,"theme colors")
-    colRow(L,"background",T.bg,function(c) T.bg=c; tw(MF,{BackgroundColor3=c},0.1) end)
-    colRow(L,"nav bg",T.navBg,function(c) T.navBg=c; if NavBar then tw(NavBar,{BackgroundColor3=c},0.1) end end)
-    colRow(L,"border",T.border,function(c) T.border=c; mfStroke.Color=c end)
-    colRow(L,"accent",T.accent,function(c) T.accent=c; refreshTheme() end)
-    colRow(L,"text",T.text,function(c) T.text=c; refreshTheme() end)
+    colRow(L,"background",T.bg,function(c) T.bg=c; tw(MF,{BackgroundColor3=c},0.1) end,"bg")
+    colRow(L,"nav bg",T.navBg,function(c) T.navBg=c; if NavBar then tw(NavBar,{BackgroundColor3=c},0.1) end end,"navBg")
+    colRow(L,"border",T.border,function(c) T.border=c; mfStroke.Color=c end,"border")
+    colRow(L,"accent",T.accent,function(c) T.accent=c; refreshTheme() end,"accent")
+    colRow(L,"text",T.text,function(c) T.text=c; refreshTheme() end,"text")
     spacer(L,2)
     secHdr(L,"toggle keybind")
     local kf=ni("Frame",{Size=UDim2.new(1,0,0,26),BackgroundColor3=T.inputBg,BorderSizePixel=0},L)
@@ -986,54 +1024,52 @@ local function buildOptions()
     spacer(R,6)
     secHdr(R,"danger zone")
     local _unloadState=0; local _unloadTask=nil
-    local unloadBtn=ni("TextButton",{Text="unload",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=Color3.fromRGB(255,255,255),BackgroundColor3=Color3.fromRGB(60,18,18),BorderSizePixel=0,Size=UDim2.new(1,0,0,28),AutoButtonColor=false},R)
-    mkCorner(6,unloadBtn); mkStroke(Color3.fromRGB(140,30,30),1,unloadBtn)
+    local unloadBtn=ni("TextButton",{Text="unload",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.textDim,BackgroundColor3=T.cbOff,BorderSizePixel=0,Size=UDim2.new(1,0,0,28),AutoButtonColor=false},R)
+    mkCorner(6,unloadBtn); mkStroke(T.border,1,unloadBtn)
     local function resetUnloadBtn()
         _unloadState=0
         if _unloadTask then task.cancel(_unloadTask); _unloadTask=nil end
         pcall(function()
             unloadBtn.Text="unload"
-            unloadBtn.BackgroundColor3=Color3.fromRGB(60,18,18)
-            unloadBtn.TextColor3=Color3.fromRGB(200,100,100)
+            unloadBtn.BackgroundColor3=T.cbOff
+            unloadBtn.TextColor3=T.textDim
         end)
     end
     resetUnloadBtn()
     unloadBtn.MouseButton1Click:Connect(function()
         if _unloadState==0 then
             _unloadState=1
-            unloadBtn.BackgroundColor3=Color3.fromRGB(160,30,30)
-            unloadBtn.TextColor3=Color3.fromRGB(255,255,255)
-            local t=3
-            unloadBtn.Text="are you sure?  ("..t.."s)"
+            unloadBtn.BackgroundColor3=T.accentDim
+            unloadBtn.TextColor3=T.text
+            local t=3; unloadBtn.Text="are you sure?  ("..t.."s)"
+            if _unloadTask then task.cancel(_unloadTask) end
             _unloadTask=task.spawn(function()
-                while t>0 do task.wait(1); t=t-1; pcall(function() unloadBtn.Text="are you sure?  ("..t.."s)" end) end
-                resetUnloadBtn()
+                while t>0 do
+                    task.wait(1); t=t-1
+                    pcall(function() unloadBtn.Text="are you sure?  ("..t.."s)" end)
+                end
+                resetUnloadBtn()  -- countdown expired → go back to idle
             end)
         elseif _unloadState==1 then
-            -- confirmed — destroy everything
+            -- confirmed
             if _unloadTask then task.cancel(_unloadTask); _unloadTask=nil end
             pcall(function() unloadBtn.Text="unloading..." end)
-            task.delay(0.12,function()
-                pcall(function()
-                    tw(MF,{BackgroundTransparency=1,Size=UDim2.new(0,WIN_W,0,40)},0.25)
-                end)
-                task.delay(0.3,function()
-                    pcall(function() SGui:Destroy() end)
-                    pcall(function() KBWGui:Destroy() end)
-                end)
+            task.delay(0.1,function()
+                pcall(function() SGui:Destroy() end)
+                pcall(function() if KBWGui then KBWGui:Destroy() end end)
+                UserInputService.MouseBehavior=Enum.MouseBehavior.Default
+                UserInputService.MouseIconEnabled=true
             end)
         end
     end)
-    -- reset if user clicks elsewhere
+    -- clicking elsewhere during confirm resets to idle
     UserInputService.InputBegan:Connect(function(i)
-        if i.UserInputType==Enum.UserInputType.MouseButton1 then
-            if _unloadState==1 then
-                local mp=UserInputService:GetMouseLocation()
-                local ap=unloadBtn.AbsolutePosition; local as=unloadBtn.AbsoluteSize
-                if not(mp.X>=ap.X and mp.X<=ap.X+as.X and mp.Y>=ap.Y and mp.Y<=ap.Y+as.Y) then
-                    resetUnloadBtn()
-                end
-            end
+        if i.UserInputType~=Enum.UserInputType.MouseButton1 then return end
+        if _unloadState~=1 then return end
+        local mp=UserInputService:GetMouseLocation()
+        local ap=unloadBtn.AbsolutePosition; local as=unloadBtn.AbsoluteSize
+        if not(mp.X>=ap.X and mp.X<=ap.X+as.X and mp.Y>=ap.Y and mp.Y<=ap.Y+as.Y) then
+            resetUnloadBtn()
         end
     end)
 end
@@ -1149,7 +1185,28 @@ buildNavLayout()   -- must come AFTER all pages are built
 -- ═══════════════════════════════════════
 task.spawn(function()
 
--- ─── resize grip ─────────────────────
+-- ─── mouse behavior: restore when UI visibility changes ──────────────
+-- Fixes "mouse stuck after opening/closing UI"
+MF:GetPropertyChangedSignal("Visible"):Connect(function()
+    -- Always release mouse lock when UI comes back into view
+    if MF.Visible then
+        UserInputService.MouseBehavior=Enum.MouseBehavior.Default
+    end
+end)
+-- Also hook the toggle key handler via polling so spectate lock is released on hide
+local _prevVis=true
+RunService.Heartbeat:Connect(function()
+    local v=MF.Visible
+    if v~=_prevVis then
+        _prevVis=v
+        if not v then
+            -- UI hidden — ensure mouse is free for gameplay
+            task.defer(function() UserInputService.MouseBehavior=Enum.MouseBehavior.Default end)
+        else
+            UserInputService.MouseBehavior=Enum.MouseBehavior.Default
+        end
+    end
+end)
 local resizeGrip=ni("TextButton",{Text="",BackgroundTransparency=1,Size=UDim2.new(0,22,0,22),Position=UDim2.new(1,-22,1,-22),BorderSizePixel=0,ZIndex=14,AutoButtonColor=false},MF)
 ni("TextLabel",{Text="⌟",Font=Enum.Font.GothamBold,TextSize=14,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),TextXAlignment=Enum.TextXAlignment.Right,TextYAlignment=Enum.TextYAlignment.Bottom,ZIndex=14},resizeGrip)
 local _resizing=false
