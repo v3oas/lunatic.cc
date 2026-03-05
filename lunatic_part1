@@ -500,44 +500,45 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- ═══════════════════════════════════════
---   SILENT AIM — hookmetamethod (primary)
+--   SILENT AIM — __index CoordinateFrame (Arsenal-specific)
 -- ═══════════════════════════════════════
 local _saTarget=nil
 pcall(function()
     if not hookmetamethod then return end
-    local oldNamecall
-    oldNamecall=hookmetamethod(game,"__namecall",newcclosure(function(self,...)
-        local method=getnamecallmethod()
-        -- intercept FireServer calls when SA is active
-        if (method=="FireServer" or method=="InvokeServer") and SA.Enabled and _saTarget and _saTarget.Parent then
-            local args={...}
-            local targetPos=_saTarget.Position
-            -- apply prediction offset if enabled
-            if SA.Prediction then
-                local root=_saTarget.Parent and _saTarget.Parent:FindFirstChild("HumanoidRootPart")
-                if root then
-                    local vel=root.AssemblyLinearVelocity
-                    targetPos=targetPos+Vector3.new(vel.X*SA.PredX*0.05,vel.Y*SA.PredY*0.05,vel.Z*SA.PredX*0.05)
+    local oldIndex
+    oldIndex=hookmetamethod(game,"__index",newcclosure(function(self,index)
+        -- Arsenal fires CoordinateFrame from Client.Functions.Weapons — intercept there
+        if SA.Enabled
+            and self==Cam
+            and index=="CoordinateFrame"
+            and string.match(debug.info(3,"s") or "","Client.Functions.Weapons")
+            and debug.info(debug.info(3,"f"),"n")~="RotCamera"
+        then
+            local hitPart=_saTarget
+            if hitPart and hitPart.Parent then
+                local targetPos=hitPart.Position
+                -- optional prediction
+                if SA.Prediction then
+                    local root=hitPart.Parent:FindFirstChild("HumanoidRootPart")
+                    if root then
+                        local vel=root.AssemblyLinearVelocity
+                        targetPos=targetPos+Vector3.new(
+                            vel.X*SA.PredX*0.05,
+                            vel.Y*SA.PredY*0.05,
+                            vel.Z*SA.PredX*0.05
+                        )
+                    end
                 end
+                return CFrame.new(Cam.CFrame.Position,targetPos)
             end
-            -- replace first matching position/part/cframe argument
-            local done=false
-            for i,v in ipairs(args) do
-                if not done then
-                    if typeof(v)=="Vector3" then args[i]=targetPos; done=true
-                    elseif typeof(v)=="Instance" and v:IsA("BasePart") then args[i]=_saTarget; done=true
-                    elseif typeof(v)=="CFrame" then args[i]=CFrame.new(v.Position,targetPos); done=true end
-                end
-            end
-            return oldNamecall(self,table.unpack(args))
         end
-        return oldNamecall(self,...)
+        return oldIndex(self,index)
     end))
 end)
 
--- fallback: hook individual RemoteEvents (for executors without hookmetamethod)
+-- fallback for executors without hookmetamethod: hook RemoteEvent.FireServer
 pcall(function()
-    if hookmetamethod then return end -- skip if hookmetamethod worked
+    if hookmetamethod then return end
     local hooked={}
     local function hookRem(rem)
         if hooked[rem] then return end; hooked[rem]=true
@@ -545,6 +546,13 @@ pcall(function()
         rem.FireServer=function(self,...)
             if SA.Enabled and _saTarget and _saTarget.Parent then
                 local args={...}; local targetPos=_saTarget.Position; local done=false
+                if SA.Prediction then
+                    local root=_saTarget.Parent:FindFirstChild("HumanoidRootPart")
+                    if root then
+                        local vel=root.AssemblyLinearVelocity
+                        targetPos=targetPos+Vector3.new(vel.X*SA.PredX*0.05,vel.Y*SA.PredY*0.05,vel.Z*SA.PredX*0.05)
+                    end
+                end
                 for i,v in ipairs(args) do
                     if not done then
                         if typeof(v)=="Vector3" then args[i]=targetPos; done=true
