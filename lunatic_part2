@@ -153,7 +153,7 @@ selTab("Combat")
         caSz=UDim2.new(1,-NAV_SIDE_W,1,0); caPos=UDim2.new(0,0,0,0)
     end
 
-    NavBar=ni("Frame",{Size=nbSz,Position=nbPos,BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5,ClipsDescendants=isSide},clipInner)
+    NavBar=ni("Frame",{Size=nbSz,Position=nbPos,BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5,ClipsDescendants=isSide},MF)
     mkCorner(T.radius,NavBar)
     -- fill the inner flat edge so rounded corners don't bleed into content
     local flatSz,flatPos
@@ -238,7 +238,7 @@ selTab("Combat")
         mkPad(5,5,0,0,tabCont)
     end
 
-    ContentArea=ni("Frame",{Size=caSz,Position=caPos,BackgroundTransparency=1,ClipsDescendants=true,ZIndex=3},clipInner)
+    ContentArea=ni("Frame",{Size=caSz,Position=caPos,BackgroundTransparency=1,ClipsDescendants=true,ZIndex=3},MF)
     for _,name in ipairs(tabDefs) do if tabPages[name] then tabPages[name].pg.Parent=ContentArea end end
 
     for _,name in ipairs(tabDefs) do
@@ -1353,4 +1353,4 @@ tw(blurFX,{Size=T.blurAmt},0.45)
 tw(darkOverlay,{BackgroundTransparency=1-T.overlayAlpha},0.45)
 task.delay(0.12,function() UserInputService.MouseIconEnabled=false; dotCursor.Visible=true end)
 
-end) -- end task.spawn
+end) 
