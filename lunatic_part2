@@ -11,6 +11,7 @@ local VFlight,JumpMod,VS       = _g.VFlight,_g.JumpMod,_g.VS
 local SpinBot,FakeLag,CharChg  = _g.SpinBot,_g.FakeLag,_g.CharChg
 local MiscMov,CursorDraw,WorldFX = _g.MiscMov,_g.CursorDraw,_g.WorldFX
 local HitNotifs,Arsenal,HitChams = _g.HitNotifs,_g.Arsenal,_g.HitChams
+HitChams = HitChams or {Enabled=false,Color=Color3.fromRGB(248,50,50),Duration=0.18,Sound=false,SoundId="rbxassetid://4612481101",Volume=0.6}
 local HBX,LocalESP,Chams       = _g.HBX,_g.LocalESP,_g.Chams
 local KBRegistry,addKBCb,regKB = _g.KBRegistry,_g.addKBCb,_g.regKB
 local abKB,saKB,tbKB           = _g.abKB,_g.saKB,_g.tbKB
@@ -1248,7 +1249,7 @@ end
 --   BUILD EVERYTHING
 -- ============================================================
 buildCombat()
-buildVisuals()
+pcall(buildVisuals)
 buildMod()
 buildPlayers()
 buildOptions()
