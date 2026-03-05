@@ -39,6 +39,7 @@ local mkPad,spacer               = _g.mkPad,_g.spacer
 local colorToHex,hexToColor      = _g.colorToHex,_g.hexToColor
 local showNotif,getKeyName       = _g.showNotif,_g.getKeyName
 local setWatermark               = _g.setWatermark
+local WMFrame                    = _g.WMFrame   -- exported by part1: getgenv().WMFrame=wmFrame
 local uiToggleKB                 = _g.uiToggleKB or {key=Enum.KeyCode.RightShift,mode="Toggle",state=false,callbacks={}}
 local WalkMod                    = _g.WalkMod
 
@@ -541,6 +542,7 @@ end
 
 local BODYPARTS={"Head","Torso","HumanoidRootPart","LeftArm","RightArm","LeftLeg","RightLeg"}
 local TB_PARTS={"Head","Torso","LeftArm","RightArm","LeftLeg","RightLeg","All"}
+local KBWGui -- forward-declared at module scope so unload btn in buildOptions can reach it
 
 -- ═══════════════════════════════════════
 --   TAB: COMBAT
@@ -695,6 +697,7 @@ local function buildVisuals()
     cbRow(R,"custom cursor",false,function(v) CursorDraw.Enabled=v end)
     cbRow(R,"rainbow",false,function(v) CursorDraw.Rainbow=v end)
     cbRow(R,"outline",false,function(v) CursorDraw.Outline=v end)
+    sldRow(R,"outline thickness",0.5,4,1,function(v) return string.format("%.1f",v) end,function(v) CursorDraw.OutlineThick=v end)
     cbRow(R,"spin",false,function(v) CursorDraw.Spin=v end)
     sldRow(R,"length",4,60,10,nil,function(v) CursorDraw.Length=v end)
     sldRow(R,"thickness",0.5,5,1.5,function(v) return string.format("%.1f",v) end,function(v) CursorDraw.Thickness=v end)
@@ -811,21 +814,41 @@ local function buildPlayers()
     local specBtn=ni("TextButton",{Text="spectate",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.text,BackgroundColor3=T.accentDim,BorderSizePixel=0,Size=UDim2.new(0,62,1,0),AutoButtonColor=false},actionRow); mkCorner(4,specBtn)
     local unspecBtn=ni("TextButton",{Text="unspectate",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.text,BackgroundColor3=Color3.fromRGB(38,25,62),BorderSizePixel=0,Size=UDim2.new(0,78,1,0),AutoButtonColor=false},actionRow); mkCorner(4,unspecBtn)
     local flingBtn=ni("TextButton",{Text="fling",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.text,BackgroundColor3=Color3.fromRGB(115,25,25),BorderSizePixel=0,Size=UDim2.new(0,40,1,0),AutoButtonColor=false},actionRow); mkCorner(4,flingBtn)
-    local _specConn=nil
+    local _specConn=nil; local _specScrollConn=nil; local _specDist=12
     specBtn.MouseButton1Click:Connect(function()
         if not selPl or not selPl.Character then return end
         if _specConn then _specConn:Disconnect(); _specConn=nil end
+        if _specScrollConn then _specScrollConn:Disconnect(); _specScrollConn=nil end
         Cam.CameraType=Enum.CameraType.Scriptable
+        UserInputService.MouseBehavior=Enum.MouseBehavior.Default
+        -- scroll wheel zooms during spectate
+        _specScrollConn=UserInputService.InputChanged:Connect(function(i)
+            if i.UserInputType==Enum.UserInputType.MouseWheel then
+                _specDist=math.clamp(_specDist-i.Position.Z*2,2,80)
+            end
+        end)
         _specConn=RunService.RenderStepped:Connect(function()
-            if not selPl or not selPl.Character then _specConn:Disconnect(); _specConn=nil; Cam.CameraType=Enum.CameraType.Custom; return end
+            if not selPl or not selPl.Character then
+                _specConn:Disconnect(); _specConn=nil
+                if _specScrollConn then _specScrollConn:Disconnect(); _specScrollConn=nil end
+                Cam.CameraType=Enum.CameraType.Custom
+                UserInputService.MouseBehavior=Enum.MouseBehavior.Default; return
+            end
             local r=selPl.Character:FindFirstChild("HumanoidRootPart")
-            if r then Cam.CFrame=CFrame.new(r.CFrame*Vector3.new(0,4,-12),r.Position+Vector3.new(0,1.5,0)) end
+            if r then
+                local offset=Vector3.new(0,_specDist*0.33,-_specDist)
+                Cam.CFrame=CFrame.new(r.CFrame*offset,r.Position+Vector3.new(0,1.5,0))
+            end
         end)
     end)
     unspecBtn.MouseButton1Click:Connect(function()
         if _specConn then _specConn:Disconnect(); _specConn=nil end
+        if _specScrollConn then _specScrollConn:Disconnect(); _specScrollConn=nil end
         local c=LP.Character; local hum=c and c:FindFirstChild("Humanoid")
         Cam.CameraType=Enum.CameraType.Custom; if hum then Cam.CameraSubject=hum end
+        -- restore cursor properly
+        UserInputService.MouseBehavior=Enum.MouseBehavior.Default
+        task.defer(function() UserInputService.MouseBehavior=Enum.MouseBehavior.Default end)
     end)
     flingBtn.MouseButton1Click:Connect(function()
         if not selPl or not selPl.Character then return end
@@ -902,6 +925,12 @@ local function applyTheme(name)
         tw(MF,{BackgroundColor3=T.bg},0.15)
         mfStroke.Color=T.border
         if NavBar then tw(NavBar,{BackgroundColor3=T.navBg},0.15) end
+        -- recolor watermark to match new theme brand color
+        if WMFrame then
+            for _,l in ipairs(WMFrame:GetDescendants()) do
+                if l:IsA("TextLabel") then tw(l,{TextColor3=T.brand},0.15) end
+            end
+        end
     end)
     refreshTheme()
 end
@@ -915,7 +944,9 @@ local function buildOptions()
     local themeNames={}; for k in pairs(THEMES) do table.insert(themeNames,k) end; table.sort(themeNames)
     dropRow(L,"theme",themeNames,"lunatic (default)",function(v) applyTheme(v) end)
     spacer(L,2)
-    dropRow(L,"nav position",{"left","right","top","bottom"},"left",function(v) T.navMode=v; buildNavLayout() end)
+    dropRow(L,"nav position",{"left","right","top","bottom"},"left",function(v)
+        T.navMode=v; task.defer(buildNavLayout)
+    end)
     sldRow(L,"ui opacity",0,100,100,function(v) return v.."%" end,function(v) MF.BackgroundTransparency=1-(v/100) end)
     sldRow(L,"blur",0,24,8,nil,function(v) T.blurAmt=v; blurFX.Size=v end)
     spacer(L,2)
@@ -952,6 +983,59 @@ local function buildOptions()
     secHdr(R,"effects")
     cbRow(R,"blur overlay",true,function(v) tw(blurFX,{Size=v and T.blurAmt or 0},0.3) end)
     cbRow(R,"dark overlay",true,function(v) tw(darkOverlay,{BackgroundTransparency=v and (1-T.overlayAlpha) or 1},0.3) end)
+    spacer(R,6)
+    secHdr(R,"danger zone")
+    local _unloadState=0; local _unloadTask=nil
+    local unloadBtn=ni("TextButton",{Text="unload",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=Color3.fromRGB(255,255,255),BackgroundColor3=Color3.fromRGB(60,18,18),BorderSizePixel=0,Size=UDim2.new(1,0,0,28),AutoButtonColor=false},R)
+    mkCorner(6,unloadBtn); mkStroke(Color3.fromRGB(140,30,30),1,unloadBtn)
+    local function resetUnloadBtn()
+        _unloadState=0
+        if _unloadTask then task.cancel(_unloadTask); _unloadTask=nil end
+        pcall(function()
+            unloadBtn.Text="unload"
+            unloadBtn.BackgroundColor3=Color3.fromRGB(60,18,18)
+            unloadBtn.TextColor3=Color3.fromRGB(200,100,100)
+        end)
+    end
+    resetUnloadBtn()
+    unloadBtn.MouseButton1Click:Connect(function()
+        if _unloadState==0 then
+            _unloadState=1
+            unloadBtn.BackgroundColor3=Color3.fromRGB(160,30,30)
+            unloadBtn.TextColor3=Color3.fromRGB(255,255,255)
+            local t=3
+            unloadBtn.Text="are you sure?  ("..t.."s)"
+            _unloadTask=task.spawn(function()
+                while t>0 do task.wait(1); t=t-1; pcall(function() unloadBtn.Text="are you sure?  ("..t.."s)" end) end
+                resetUnloadBtn()
+            end)
+        elseif _unloadState==1 then
+            -- confirmed — destroy everything
+            if _unloadTask then task.cancel(_unloadTask); _unloadTask=nil end
+            pcall(function() unloadBtn.Text="unloading..." end)
+            task.delay(0.12,function()
+                pcall(function()
+                    tw(MF,{BackgroundTransparency=1,Size=UDim2.new(0,WIN_W,0,40)},0.25)
+                end)
+                task.delay(0.3,function()
+                    pcall(function() SGui:Destroy() end)
+                    pcall(function() KBWGui:Destroy() end)
+                end)
+            end)
+        end
+    end)
+    -- reset if user clicks elsewhere
+    UserInputService.InputBegan:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 then
+            if _unloadState==1 then
+                local mp=UserInputService:GetMouseLocation()
+                local ap=unloadBtn.AbsolutePosition; local as=unloadBtn.AbsoluteSize
+                if not(mp.X>=ap.X and mp.X<=ap.X+as.X and mp.Y>=ap.Y and mp.Y<=ap.Y+as.Y) then
+                    resetUnloadBtn()
+                end
+            end
+        end
+    end)
 end
 
 -- ═══════════════════════════════════════
@@ -1079,7 +1163,7 @@ UserInputService.InputChanged:Connect(function(i)
 end)
 
 -- ─── keybind widget (floating) ───────
-local KBWGui=ni("ScreenGui",{Name="lunatic_kbw",ResetOnSpawn=false,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,DisplayOrder=998},nil)
+KBWGui=ni("ScreenGui",{Name="lunatic_kbw",ResetOnSpawn=false,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,DisplayOrder=998},nil)
 pcall(function() KBWGui.Parent=CoreGui end)
 if not KBWGui.Parent then KBWGui.Parent=PGui end
 
