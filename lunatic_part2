@@ -23,7 +23,7 @@ local WIN_W=_g.WIN_W; local WIN_H=_g.WIN_H
 local ni=_g.ni; local tw=_g.tw; local mkCorner=_g.mkCorner
 local mkStroke=_g.mkStroke; local mkPad=_g.mkPad; local spacer=_g.spacer
 local showNotif=_g.showNotif; local getKeyName=_g.getKeyName
-local setWatermark=_g.setWatermark
+local setWatermark=_g.setWatermark; local refreshTheme=_g.refreshTheme
 local _ACTIVE_TAB=nil
 
 -- ═══════════════════════════════════════
@@ -354,6 +354,7 @@ end
 -- ═══════════════════════════════════════
 
 -- section header
+local REG_SECHDR={}
 local function secHdr(parent,text)
     local f=ni("Frame",{Size=UDim2.new(1,0,0,22),BackgroundTransparency=1},parent)
     local lbl=ni("TextLabel",{Text=text:upper(),Font=Enum.Font.GothamBold,TextSize=9,TextColor3=T.secHdr,BackgroundTransparency=1,Size=UDim2.new(1,0,0,14),TextXAlignment=Enum.TextXAlignment.Left},f)
@@ -1068,6 +1069,7 @@ local function applyTheme(name)
                     if inst:IsA("UIStroke") then inst.Color=T.border
                     else inst.BackgroundColor3=T.border end
                 elseif tag=="sep"     then inst.BackgroundColor3=T.sep
+                elseif tag=="secHdr"  then inst.TextColor3=T.secHdr
                 elseif tag=="accent"  then inst.BackgroundColor3=T.accent
                 elseif tag=="accentDim" then inst.BackgroundColor3=T.accentDim
                 elseif tag=="text"    then inst.TextColor3=T.text
