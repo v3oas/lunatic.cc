@@ -1460,6 +1460,7 @@ _g.VFlight=VFlight; _g.JumpMod=JumpMod; _g.VS=VS
 _g.SpinBot=SpinBot; _g.FakeLag=FakeLag; _g.CharChg=CharChg
 _g.MiscMov=MiscMov; _g.CursorDraw=CursorDraw; _g.WorldFX=WorldFX
 _g.HitNotifs=HitNotifs; _g.Arsenal=Arsenal; _g.HitChams=HitChams
+_g.WalkMod=WalkMod; _g.JumpMod=JumpMod
 _g.HBX=HBX; _g.Watermark=Watermark
 _g.KBRegistry=KBRegistry; _g.addKBCb=addKBCb; _g.regKB=regKB
 _g.abKB=abKB; _g.saKB=saKB; _g.tbKB=tbKB
