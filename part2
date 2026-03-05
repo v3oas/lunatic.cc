@@ -1,3 +1,6 @@
+print(tostring(getgenv().AB))
+print(tostring(getgenv().MF))
+print(tostring(getgenv().ni))
 -- ─── import shared state from global env ───
 local _g=getgenv()
 local AB,SA,TB,ESP=_g.AB,_g.SA,_g.TB,_g.ESP
