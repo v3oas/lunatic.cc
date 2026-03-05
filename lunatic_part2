@@ -38,6 +38,7 @@ local setWatermark,applySkybox = _g.setWatermark,_g.applySkybox
 local _skyboxIds               = _g._skyboxIds or {}
 local applyLocalESP            = _g.applyLocalESP
 local clipInner,uiToggleKB     = _g.clipInner,_g.uiToggleKB
+uiToggleKB = uiToggleKB or {key=Enum.KeyCode.RightShift,mode="Toggle",state=false,callbacks={}}
 
 -- active tab tracker lives here so nav rebuilds work properly
 local _ACTIVE_TAB=nil
@@ -1112,7 +1113,8 @@ local function buildOptions()
     secHdr(L,"toggle keybind")
     local kf=ni("Frame",{Size=UDim2.new(1,0,0,24),BackgroundColor3=T.inputBg,BorderSizePixel=0},L)
     mkCorner(5,kf); mkStroke(T.border,1,kf)
-    local kl=ni("TextLabel",{Text="[ "..getKeyName(uiToggleKB.key).." ]",Font=Enum.Font.Gotham,TextSize=10,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=2},kf)
+    local kl=ni("TextLabel",{Text="[ "..(uiToggleKB and getKeyName(uiToggleKB.key) or "—").." ]",
+    Font=Enum.Font.Gotham,TextSize=10,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=2},kf)
     local kListen=false
     ni("TextButton",{Text="",BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=3},kf).MouseButton1Click:Connect(function()
         if kListen then return end; kListen=true; kl.Text="[ press any key ]"; kl.TextColor3=T.textDim
