@@ -500,82 +500,77 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- ═══════════════════════════════════════
---   SILENT AIM — __index CoordinateFrame (Arsenal-specific)
+--   SILENT AIM — hookfunction FindPartOnRayWithIgnoreList
+-- Intercepts the raycast Arsenal uses for hit detection and redirects
+-- the ray origin+direction toward the target — crosshair never moves.
 -- ═══════════════════════════════════════
 local _saTarget=nil
 pcall(function()
-    if not hookmetamethod then return end
-    local oldIndex
-    oldIndex=hookmetamethod(game,"__index",newcclosure(function(self,index)
-        -- Arsenal fires CoordinateFrame from Client.Functions.Weapons — intercept there
-        if SA.Enabled
-            and self==Cam
-            and index=="CoordinateFrame"
-            and string.match(debug.info(3,"s") or "","Client.Functions.Weapons")
-            and debug.info(debug.info(3,"f"),"n")~="RotCamera"
-        then
-            local hitPart=_saTarget
-            if hitPart and hitPart.Parent then
-                local targetPos=hitPart.Position
-                -- optional prediction
+    if not hookfunction then return end
+
+    local oldFPORWIL = hookfunction(workspace.FindPartOnRayWithIgnoreList,
+        newcclosure(function(ws, ray, ignoreList, ...)
+
+            if SA.Enabled and _saTarget and _saTarget.Parent then
+                local targetPos = _saTarget.Position
+
+                -- prediction offset
                 if SA.Prediction then
-                    local root=hitPart.Parent:FindFirstChild("HumanoidRootPart")
+                    local root = _saTarget.Parent:FindFirstChild("HumanoidRootPart")
                     if root then
-                        local vel=root.AssemblyLinearVelocity
-                        targetPos=targetPos+Vector3.new(
-                            vel.X*SA.PredX*0.05,
-                            vel.Y*SA.PredY*0.05,
-                            vel.Z*SA.PredX*0.05
+                        local vel = root.AssemblyLinearVelocity
+                        targetPos = targetPos + Vector3.new(
+                            vel.X * SA.PredX * 0.05,
+                            vel.Y * SA.PredY * 0.05,
+                            vel.Z * SA.PredX * 0.05
                         )
                     end
                 end
-                return CFrame.new(Cam.CFrame.Position,targetPos)
+
+                -- build a new ray: same origin, direction redirected at target
+                local origin    = ray.Origin
+                local direction = (targetPos - origin).Unit * ray.Direction.Magnitude
+                local newRay    = Ray.new(origin, direction)
+
+                return oldFPORWIL(ws, newRay, ignoreList, ...)
             end
-        end
-        return oldIndex(self,index)
-    end))
+
+            return oldFPORWIL(ws, ray, ignoreList, ...)
+        end)
+    )
 end)
 
--- fallback for executors without hookmetamethod: hook RemoteEvent.FireServer
+-- fallback: hookmetamethod __index CoordinateFrame (if hookfunction unavailable)
 pcall(function()
-    if hookmetamethod then return end
-    local hooked={}
-    local function hookRem(rem)
-        if hooked[rem] then return end; hooked[rem]=true
-        local origFire=rem.FireServer
-        rem.FireServer=function(self,...)
-            if SA.Enabled and _saTarget and _saTarget.Parent then
-                local args={...}; local targetPos=_saTarget.Position; local done=false
+    if hookfunction then return end  -- skip if hookfunction worked
+    if not hookmetamethod then return end
+    local oldIndex
+    oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, index)
+        if SA.Enabled
+            and self == Cam
+            and index == "CoordinateFrame"
+            and string.match(debug.info(3, "s") or "", "Client.Functions.Weapons")
+            and debug.info(debug.info(3, "f"), "n") ~= "RotCamera"
+        then
+            local hitPart = _saTarget
+            if hitPart and hitPart.Parent then
+                local targetPos = hitPart.Position
                 if SA.Prediction then
-                    local root=_saTarget.Parent:FindFirstChild("HumanoidRootPart")
+                    local root = hitPart.Parent:FindFirstChild("HumanoidRootPart")
                     if root then
-                        local vel=root.AssemblyLinearVelocity
-                        targetPos=targetPos+Vector3.new(vel.X*SA.PredX*0.05,vel.Y*SA.PredY*0.05,vel.Z*SA.PredX*0.05)
+                        local vel = root.AssemblyLinearVelocity
+                        targetPos = targetPos + Vector3.new(
+                            vel.X * SA.PredX * 0.05,
+                            vel.Y * SA.PredY * 0.05,
+                            vel.Z * SA.PredX * 0.05
+                        )
                     end
                 end
-                for i,v in ipairs(args) do
-                    if not done then
-                        if typeof(v)=="Vector3" then args[i]=targetPos; done=true
-                        elseif typeof(v)=="Instance" and v:IsA("BasePart") then args[i]=_saTarget; done=true
-                        elseif typeof(v)=="CFrame" then args[i]=CFrame.new(v.Position,targetPos); done=true end
-                    end
-                end
-                return origFire(self,table.unpack(args))
+                return CFrame.new(Cam.CFrame.Position, targetPos)
             end
-            return origFire(self,...)
         end
-    end
-    local function scanRems(inst)
-        for _,v in ipairs(inst:GetDescendants()) do if v:IsA("RemoteEvent") then hookRem(v) end end
-        inst.DescendantAdded:Connect(function(v) if v:IsA("RemoteEvent") then hookRem(v) end end)
-    end
-    scanRems(workspace); scanRems(game:GetService("ReplicatedStorage"))
-    if LP.Character then
-        LP.Character.ChildAdded:Connect(function(t) if t:IsA("Tool") then task.delay(0.1,function() scanRems(t) end) end end)
-    end
-    LP.CharacterAdded:Connect(function(c)
-        c.ChildAdded:Connect(function(t) if t:IsA("Tool") then task.delay(0.1,function() scanRems(t) end) end end)
-    end)
+        return oldIndex(self, index)
+    end))
 end)
 
 -- ═══════════════════════════════════════
