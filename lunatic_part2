@@ -120,6 +120,8 @@ local function selTab(name)
 end
 
 local function buildNavLayout()
+task.wait(0.1)
+selTab("Combat")
     if NavBar then NavBar:Destroy() end
     if ContentArea then
         for _,name in ipairs(tabDefs) do
@@ -1342,7 +1344,7 @@ task.spawn(function()
 end)
 
 -- entry animation — slides in from slightly below center
-MF.BackgroundTransparency=1
+MF.BackgroundTransparency=0
 MF.Size=UDim2.new(0,WIN_W,0,WIN_H-50)
 MF.Position=UDim2.new(0.5,-WIN_W/2,0.5,-(WIN_H-50)/2+30)
 tw(MF,{BackgroundTransparency=0,Size=UDim2.new(0,WIN_W,0,WIN_H),Position=UDim2.new(0.5,-WIN_W/2,0.5,-WIN_H/2)},0.45,Enum.EasingStyle.Back)
