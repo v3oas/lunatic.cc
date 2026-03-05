@@ -1,60 +1,53 @@
 --[[
-  lunatic.cc v6 — part2
-  navbar, ui widgets, tab pages, keybind widget, configs
-  requires part1 to have run first
+    lunatic.cc | v7.0 | part2
+    navbar · widgets · tabs · keybind widget · configs
+    requires part1 to have run first
 --]]
 
--- pull everything part1 exported
+-- ═══════════════════════════════════════
+--   IMPORT FROM PART1
+-- ═══════════════════════════════════════
 local _g=getgenv()
-local AB,SA,TB,ESP             = _g.AB,_g.SA,_g.TB,_g.ESP
-local VFlight,JumpMod,VS       = _g.VFlight,_g.JumpMod,_g.VS
-local SpinBot,FakeLag,CharChg  = _g.SpinBot,_g.FakeLag,_g.CharChg
+local AB,SA,TB,ESP               = _g.AB,_g.SA,_g.TB,_g.ESP
+local CFrameMove,CFrameFly       = _g.CFrameMove,_g.CFrameFly
+local VelocityFly,JumpMod        = _g.VelocityFly,_g.JumpMod
+local SpinBot,FakeLag,CharChg    = _g.SpinBot,_g.FakeLag,_g.CharChg
 local MiscMov,CursorDraw,WorldFX = _g.MiscMov,_g.CursorDraw,_g.WorldFX
 local HitNotifs,Arsenal,HitChams = _g.HitNotifs,_g.Arsenal,_g.HitChams
-HitChams = HitChams or {Enabled=false,Color=Color3.fromRGB(248,50,50),Duration=0.18,Sound=false,SoundId="rbxassetid://4612481101",Volume=0.6}
-local HBX,LocalESP,Chams       = _g.HBX,_g.LocalESP,_g.Chams
-local KBRegistry,addKBCb,regKB = _g.KBRegistry,_g.addKBCb,_g.regKB
-local abKB,saKB,tbKB           = _g.abKB,_g.saKB,_g.tbKB
-local vsKB,wsKB,vfKB,sbKB      = _g.vsKB,_g.wsKB,_g.vfKB,_g.sbKB
-local T                        = _g.T
-local applyWorldFX,clearHBX    = _g.applyWorldFX,_g.clearHBX
-local setWeather,applyCharChg  = _g.setWeather,_g.applyCharChg
-local setFakeLag,refreshChams  = _g.setFakeLag,_g.refreshChams
-local Players,RunService       = _g.Players,_g.RunService
+local HBX,LocalESP,Chams         = _g.HBX,_g.LocalESP,_g.Chams
+local KBRegistry,addKBCb,regKB   = _g.KBRegistry,_g.addKBCb,_g.regKB
+local abKB,saKB,tbKB             = _g.abKB,_g.saKB,_g.tbKB
+local cfmKB,cffKB                = _g.cfmKB,_g.cffKB
+local wsKB,sbKB,vfKB             = _g.wsKB,_g.sbKB,_g.vfKB
+local T                          = _g.T
+local applyWorldFX,clearHBX      = _g.applyWorldFX,_g.clearHBX
+local setWeather,applyCharChg    = _g.setWeather,_g.applyCharChg
+local applySkybox,applyLocalESP  = _g.applySkybox,_g.applyLocalESP
+local setFakeLag,refreshChams    = _g.setFakeLag,_g.refreshChams
+local Players,RunService         = _g.Players,_g.RunService
 local UserInputService,TweenService = _g.UserInputService,_g.TweenService
-local Lighting,HttpService     = _g.Lighting,_g.HttpService
-local CoreGui,LP,PGui,Cam      = _g.CoreGui,_g.LP,_g.PGui,_g.Cam
-local SGui,MF,mfStroke,blurFX  = _g.SGui,_g.MF,_g.mfStroke,_g.blurFX
-local darkOverlay,dotCursor    = _g.darkOverlay,_g.dotCursor
-local uiVisible,setUIVisible   = _g.uiVisible,_g.setUIVisible
-local WIN_W,WIN_H              = _g.WIN_W,_g.WIN_H
-local NAV_SIDE_W,NAV_TOP_H     = _g.NAV_SIDE_W or 124,_g.NAV_TOP_H or 40
-local NAV_COLLAPSED_W          = _g.NAV_COLLAPSED_W or 8
-local ni,tw,mkCorner,mkStroke  = _g.ni,_g.tw,_g.mkCorner,_g.mkStroke
-local mkPad,spacer             = _g.mkPad,_g.spacer
-local colorToHex,hexToColor    = _g.colorToHex,_g.hexToColor
-local showNotif,getKeyName     = _g.showNotif,_g.getKeyName
-local setWatermark,applySkybox = _g.setWatermark,_g.applySkybox
-local _skyboxIds               = _g._skyboxIds or {}
-local applyLocalESP            = _g.applyLocalESP
-local clipInner,uiToggleKB     = _g.clipInner,_g.uiToggleKB
-uiToggleKB = uiToggleKB or {key=Enum.KeyCode.RightShift,mode="Toggle",state=false,callbacks={}}
-clipInner = MF:FindFirstChild("Main") or clipInner
--- active tab tracker lives here so nav rebuilds work properly
-local _ACTIVE_TAB=nil
+local Lighting,HttpService       = _g.Lighting,_g.HttpService
+local CoreGui,LP,PGui,Cam        = _g.CoreGui,_g.LP,_g.PGui,_g.Cam
+local SGui,MF,mfStroke           = _g.SGui,_g.MF,_g.mfStroke
+local blurFX,darkOverlay         = _g.blurFX,_g.darkOverlay
+local dotCursor                  = _g.dotCursor
+local uiVisible,setUIVisible     = _g.uiVisible,_g.setUIVisible
+local WIN_W,WIN_H                = _g.WIN_W,_g.WIN_H
+local NAV_SIDE_W                 = _g.NAV_SIDE_W or 124
+local ni,tw,mkCorner,mkStroke    = _g.ni,_g.tw,_g.mkCorner,_g.mkStroke
+local mkPad,spacer               = _g.mkPad,_g.spacer
+local colorToHex,hexToColor      = _g.colorToHex,_g.hexToColor
+local showNotif,getKeyName       = _g.showNotif,_g.getKeyName
+local setWatermark               = _g.setWatermark
+local uiToggleKB                 = _g.uiToggleKB or {key=Enum.KeyCode.RightShift,mode="Toggle",state=false,callbacks={}}
+local WalkMod                    = _g.WalkMod
 
--- ============================================================
---   live registries — all widgets register here so refreshTheme works
--- ============================================================
-local REG_CB={}
-local REG_SL={}
-local REG_SECHDR={}
-local REG_TEXT={}
-local REG_TABBTNS={}
-local REG_TABINDS={}
+-- ═══════════════════════════════════════
+--   LIVE WIDGET REGISTRIES
+-- ═══════════════════════════════════════
+local REG_CB={}; local REG_SL={}; local REG_SECHDR={}; local REG_TEXT={}
+local REG_TABBTNS={}; local REG_TABINDS={}; local REG_COL={}
 
--- refreshTheme walks every registered widget and re-colors it
--- called whenever a theme is applied or a color is changed manually
 local function refreshTheme()
     for _,cb in ipairs(REG_CB) do
         local on=cb.getState()
@@ -66,13 +59,9 @@ local function refreshTheme()
     end
     for _,sl in ipairs(REG_SL) do
         pcall(function()
-            sl.track.BackgroundColor3=T.slTrack
-            sl.fill.BackgroundColor3=T.slFill
-            sl.knob.BackgroundColor3=T.slKnob
-            sl.ks.Color=T.slFill
-            if not sl.ts then
-                sl.ts=Instance.new("UIStroke",sl.track); sl.ts.Thickness=1
-            end
+            sl.track.BackgroundColor3=T.slTrack; sl.fill.BackgroundColor3=T.slFill
+            sl.knob.BackgroundColor3=T.slKnob; sl.ks.Color=T.slFill
+            if not sl.ts then sl.ts=Instance.new("UIStroke",sl.track); sl.ts.Thickness=1 end
             sl.ts.Color=T.slFill; sl.ts.Transparency=0.7
         end)
     end
@@ -81,7 +70,7 @@ local function refreshTheme()
     end
     for _,tl in ipairs(REG_TEXT) do
         pcall(function()
-            if tl.role=="text"  then tl.lbl.TextColor3=T.text
+            if     tl.role=="text"  then tl.lbl.TextColor3=T.text
             elseif tl.role=="dim"   then tl.lbl.TextColor3=T.textDim
             elseif tl.role=="sec"   then tl.lbl.TextColor3=T.secHdr
             elseif tl.role=="brand" then tl.lbl.TextColor3=T.brand end
@@ -95,166 +84,136 @@ local function refreshTheme()
     end
 end
 
--- ============================================================
---   navbar + tab system
--- ============================================================
-local NavBar,ContentArea
-local tabDefs={"combat","visuals","mod","players","options","configs"}
-local tabPages={}
-local navTabBtns={}
-local navTabInds={}
+-- ═══════════════════════════════════════
+--   NAV + TAB SYSTEM
+-- ═══════════════════════════════════════
+local NavBar, ContentArea
+local _ACTIVE_TAB = nil
+local tabDefs = {"combat","visuals","mod","players","options","configs"}
+local tabPages = {}
+local navTabBtns = {}
+local navTabInds = {}
 
-if not ContentArea then return end
 local function selTab(name)
-    if _ACTIVE_TAB==name then return end
+    if _ACTIVE_TAB == name then return end
     if _ACTIVE_TAB then
         local ob=navTabBtns[_ACTIVE_TAB]; local oi=navTabInds[_ACTIVE_TAB]
         if ob then tw(ob,{TextColor3=T.tabIdle},0.1) end
         if oi then tw(oi,{BackgroundTransparency=1},0.1) end
         if tabPages[_ACTIVE_TAB] then tabPages[_ACTIVE_TAB].pg.Visible=false end
     end
-    _ACTIVE_TAB=name
+    _ACTIVE_TAB = name
     local nb=navTabBtns[name]; local ni_=navTabInds[name]
     if nb then tw(nb,{TextColor3=T.tabActive},0.1) end
     if ni_ then tw(ni_,{BackgroundTransparency=0},0.1) end
-    if tabPages[name] then tabPages[name].pg.Parent=ContentArea; tabPages[name].pg.Visible=true end
+    if ContentArea and tabPages[name] then
+        tabPages[name].pg.Parent=ContentArea; tabPages[name].pg.Visible=true
+    end
 end
 
 local function buildNavLayout()
-task.wait(0.1)
-selTab("Combat")
-    if NavBar then NavBar:Destroy() end
+    if NavBar then NavBar:Destroy(); NavBar=nil end
     if ContentArea then
         for _,name in ipairs(tabDefs) do
-            if tabPages[name] then tabPages[name].pg.Parent=clipInner end
+            if tabPages[name] then tabPages[name].pg.Parent=MF end
         end
-        ContentArea:Destroy()
+        ContentArea:Destroy(); ContentArea=nil
     end
     for k in pairs(navTabBtns) do navTabBtns[k]=nil end
     for k in pairs(navTabInds) do navTabInds[k]=nil end
     for k in pairs(REG_TABBTNS) do REG_TABBTNS[k]=nil end
     for k in pairs(REG_TABINDS) do REG_TABINDS[k]=nil end
 
-    local mode=T.navMode
-    local isHoriz=(mode=="top" or mode=="bottom")
-    local isSide=not isHoriz
+    local mode = T.navMode or "left"
+    local isSide = (mode=="left" or mode=="right")
+    local NAV_TOP_H = 40
     local nbSz,nbPos,caSz,caPos
     if mode=="top" then
-        nbSz=UDim2.new(1,0,0,NAV_TOP_H); nbPos=UDim2.new(0,0,0,0)
-        caSz=UDim2.new(1,0,1,-NAV_TOP_H); caPos=UDim2.new(0,0,0,NAV_TOP_H)
+        nbSz=UDim2.new(1,0,0,NAV_TOP_H);       nbPos=UDim2.new(0,0,0,0)
+        caSz=UDim2.new(1,0,1,-NAV_TOP_H);       caPos=UDim2.new(0,0,0,NAV_TOP_H)
     elseif mode=="bottom" then
-        nbSz=UDim2.new(1,0,0,NAV_TOP_H); nbPos=UDim2.new(0,0,1,-NAV_TOP_H)
-        caSz=UDim2.new(1,0,1,-NAV_TOP_H); caPos=UDim2.new(0,0,0,0)
+        nbSz=UDim2.new(1,0,0,NAV_TOP_H);        nbPos=UDim2.new(0,0,1,-NAV_TOP_H)
+        caSz=UDim2.new(1,0,1,-NAV_TOP_H);       caPos=UDim2.new(0,0,0,0)
     elseif mode=="left" then
-        nbSz=UDim2.new(0,NAV_SIDE_W,1,0); nbPos=UDim2.new(0,0,0,0)
-        caSz=UDim2.new(1,-NAV_SIDE_W,1,0); caPos=UDim2.new(0,NAV_SIDE_W,0,0)
-    else
-        nbSz=UDim2.new(0,NAV_SIDE_W,1,0); nbPos=UDim2.new(1,-NAV_SIDE_W,0,0)
-        caSz=UDim2.new(1,-NAV_SIDE_W,1,0); caPos=UDim2.new(0,0,0,0)
+        nbSz=UDim2.new(0,NAV_SIDE_W,1,0);       nbPos=UDim2.new(0,0,0,0)
+        caSz=UDim2.new(1,-NAV_SIDE_W,1,0);      caPos=UDim2.new(0,NAV_SIDE_W,0,0)
+    else -- right
+        nbSz=UDim2.new(0,NAV_SIDE_W,1,0);       nbPos=UDim2.new(1,-NAV_SIDE_W,0,0)
+        caSz=UDim2.new(1,-NAV_SIDE_W,1,0);      caPos=UDim2.new(0,0,0,0)
     end
 
     NavBar=ni("Frame",{Size=nbSz,Position=nbPos,BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5,ClipsDescendants=isSide},MF)
     mkCorner(T.radius,NavBar)
-    -- fill the inner flat edge so rounded corners don't bleed into content
+    -- fill flat inner edge so rounded corners don't bleed into content
     local flatSz,flatPos
-    if mode=="top"    then flatSz=UDim2.new(1,0,0.5,0); flatPos=UDim2.new(0,0,0.5,0)
-    elseif mode=="bottom" then flatSz=UDim2.new(1,0,0.5,0); flatPos=UDim2.new(0,0,0,0)
-    elseif mode=="left"   then flatSz=UDim2.new(0.5,0,1,0); flatPos=UDim2.new(0.5,0,0,0)
-    else flatSz=UDim2.new(0.5,0,1,0); flatPos=UDim2.new(0,0,0,0) end
+    if     mode=="left"   then flatSz=UDim2.new(0.5,0,1,0); flatPos=UDim2.new(0.5,0,0,0)
+    elseif mode=="right"  then flatSz=UDim2.new(0.5,0,1,0); flatPos=UDim2.new(0,0,0,0)
+    elseif mode=="top"    then flatSz=UDim2.new(1,0,0.5,0); flatPos=UDim2.new(0,0,0.5,0)
+    else                       flatSz=UDim2.new(1,0,0.5,0); flatPos=UDim2.new(0,0,0,0) end
     ni("Frame",{Size=flatSz,Position=flatPos,BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5},NavBar)
 
-    -- separator line between nav and content
-    if isHoriz then
-        local yp=mode=="top" and UDim2.new(0,0,1,-1) or UDim2.new(0,0,0,0)
-        ni("Frame",{Size=UDim2.new(1,0,0,1),Position=yp,BackgroundColor3=T.sep,BorderSizePixel=0,ZIndex=6},NavBar)
-    else
-        local xp=mode=="left" and UDim2.new(1,-1,0,0) or UDim2.new(0,0,0,0)
+    -- separator between nav and content
+    if isSide then
+        local xp = mode=="left" and UDim2.new(1,-1,0,0) or UDim2.new(0,0,0,0)
         ni("Frame",{Size=UDim2.new(0,1,1,0),Position=xp,BackgroundColor3=T.sep,BorderSizePixel=0,ZIndex=6},NavBar)
+    else
+        local yp = mode=="top" and UDim2.new(0,0,1,-1) or UDim2.new(0,0,0,0)
+        ni("Frame",{Size=UDim2.new(1,0,0,1),Position=yp,BackgroundColor3=T.sep,BorderSizePixel=0,ZIndex=6},NavBar)
     end
 
-    -- traffic-light style window buttons (close/minimize/maximize)
-    if mode=="left" or mode=="top" then
-        local function macBtn(col,hov,pos_)
-            local b=ni("TextButton",{Size=UDim2.new(0,11,0,11),Position=pos_,BackgroundColor3=col,Text="",BorderSizePixel=0,ZIndex=10,AutoButtonColor=false},NavBar)
-            mkCorner(6,b)
-            b.MouseEnter:Connect(function() tw(b,{BackgroundColor3=hov},0.08) end)
-            b.MouseLeave:Connect(function() tw(b,{BackgroundColor3=col},0.08) end)
-            return b
-        end
-        local crP,mgP,mxP
-        if mode=="top" then
-            crP=UDim2.new(1,-43,0.5,-5); mgP=UDim2.new(1,-29,0.5,-5); mxP=UDim2.new(1,-15,0.5,-5)
-        else
-            crP=UDim2.new(0,8,0,9); mgP=UDim2.new(0,22,0,9); mxP=UDim2.new(0,36,0,9)
-        end
-        local crBtn=macBtn(Color3.fromRGB(255,88,78),Color3.fromRGB(210,48,38),crP)
-        local mgBtn=macBtn(Color3.fromRGB(255,198,38),Color3.fromRGB(210,153,12),mgP)
-        local mxBtn=macBtn(Color3.fromRGB(48,208,78),Color3.fromRGB(24,166,48),mxP)
-        crBtn.MouseButton1Click:Connect(function()
-            tw(MF,{BackgroundTransparency=1},0.2); task.delay(0.22,function() SGui:Destroy() end)
-        end)
-        local isMin,isMax=false,false; local sSz=MF.Size; local sPs=MF.Position
-        mgBtn.MouseButton1Click:Connect(function()
-            if isMin then isMin=false; tw(MF,{Size=sSz},0.25,Enum.EasingStyle.Back)
-            else isMin=true; sSz=MF.Size; tw(MF,{Size=UDim2.new(0,WIN_W,0,NAV_TOP_H+2)},0.2) end
-        end)
-        mxBtn.MouseButton1Click:Connect(function()
-            if isMax then isMax=false; tw(MF,{Size=sSz,Position=sPs},0.3,Enum.EasingStyle.Back)
-            else isMax=true; sSz=MF.Size; sPs=MF.Position
-                tw(MF,{Size=UDim2.new(0,980,0,680),Position=UDim2.new(0.5,-490,0.5,-340)},0.3,Enum.EasingStyle.Back)
-            end
-        end)
+    -- mac-style close / minimize / maximize
+    local function macBtn(col,hov,pos_)
+        local b=ni("TextButton",{Size=UDim2.new(0,11,0,11),Position=pos_,BackgroundColor3=col,Text="",BorderSizePixel=0,ZIndex=10,AutoButtonColor=false},NavBar)
+        mkCorner(6,b)
+        b.MouseEnter:Connect(function() tw(b,{BackgroundColor3=hov},0.07) end)
+        b.MouseLeave:Connect(function() tw(b,{BackgroundColor3=col},0.07) end)
+        return b
     end
+    local crBtn=macBtn(Color3.fromRGB(255,88,78),Color3.fromRGB(210,48,38),UDim2.new(0,8,0,9))
+    local mgBtn=macBtn(Color3.fromRGB(255,198,38),Color3.fromRGB(210,153,12),UDim2.new(0,22,0,9))
+    local mxBtn=macBtn(Color3.fromRGB(48,208,78),Color3.fromRGB(24,166,48),UDim2.new(0,36,0,9))
+    crBtn.MouseButton1Click:Connect(function()
+        tw(MF,{BackgroundTransparency=1},0.2); task.delay(0.22,function() SGui:Destroy() end)
+    end)
+    local isMin,isMax=false,false; local sSz,sPs=MF.Size,MF.Position
+    mgBtn.MouseButton1Click:Connect(function()
+        if isMin then isMin=false; tw(MF,{Size=sSz},0.25,Enum.EasingStyle.Back)
+        else isMin=true; sSz=MF.Size; tw(MF,{Size=UDim2.new(0,WIN_W,0,NAV_TOP_H+2)},0.2) end
+    end)
+    mxBtn.MouseButton1Click:Connect(function()
+        if isMax then isMax=false; tw(MF,{Size=sSz,Position=sPs},0.3,Enum.EasingStyle.Back)
+        else isMax=true; sSz=MF.Size; sPs=MF.Position
+            tw(MF,{Size=UDim2.new(0,980,0,680),Position=UDim2.new(0.5,-490,0.5,-340)},0.3,Enum.EasingStyle.Back)
+        end
+    end)
 
-    -- brand label
-    local brandOff=mode=="left" and 30 or 0
-    local brandLbl=ni("TextLabel",{
-        Text="lunatic.cc",Font=Enum.Font.GothamBold,TextSize=11,TextColor3=T.brand,
-        BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,
-    },NavBar)
+    -- brand + version
+    local brandLbl=ni("TextLabel",{Text="lunatic.cc",Font=Enum.Font.GothamBold,TextSize=11,TextColor3=T.brand,BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(1,-8,0,18),Position=UDim2.new(0,8,0,30)},NavBar)
     table.insert(REG_TEXT,{lbl=brandLbl,role="brand"})
-    if isHoriz then
-        brandLbl.Size=UDim2.new(0,90,1,0); brandLbl.Position=UDim2.new(0,10,0,0)
-    else
-        brandLbl.Size=UDim2.new(1,-8,0,18); brandLbl.Position=UDim2.new(0,8,0,brandOff)
-    end
-    local verLbl=ni("TextLabel",{
-        Text="v6",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,
-        BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,
-    },NavBar)
+    local verLbl=ni("TextLabel",{Text="v7.0",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(1,-8,0,10),Position=UDim2.new(0,8,0,50)},NavBar)
     table.insert(REG_TEXT,{lbl=verLbl,role="dim"})
-    if isHoriz then verLbl.Size=UDim2.new(0,18,0,10); verLbl.Position=UDim2.new(0,10,1,-13)
-    else verLbl.Size=UDim2.new(1,-8,0,10); verLbl.Position=UDim2.new(0,8,0,brandOff+20) end
 
-    local topOff=isSide and (mode=="left" and 56 or 20) or 0
-    local tabCont=ni("Frame",{BackgroundTransparency=1,ZIndex=6},NavBar)
-    local tll=ni("UIListLayout",{Padding=UDim.new(0,2)},tabCont)
-    if isHoriz then
-        tabCont.Size=UDim2.new(1,-100,1,0); tabCont.Position=UDim2.new(0,100,0,0)
-        tll.FillDirection=Enum.FillDirection.Horizontal; tll.VerticalAlignment=Enum.VerticalAlignment.Center
-    else
-        tabCont.Size=UDim2.new(1,0,1,-topOff); tabCont.Position=UDim2.new(0,0,0,topOff)
-        tll.FillDirection=Enum.FillDirection.Vertical; tll.HorizontalAlignment=Enum.HorizontalAlignment.Left
-        mkPad(5,5,0,0,tabCont)
+    -- tab button container
+    local tabCont=ni("Frame",{BackgroundTransparency=1,ZIndex=6,Size=UDim2.new(1,0,1,-60),Position=UDim2.new(0,0,0,60)},NavBar)
+    ni("UIListLayout",{Padding=UDim.new(0,2),FillDirection=Enum.FillDirection.Vertical,HorizontalAlignment=Enum.HorizontalAlignment.Left},tabCont)
+    mkPad(5,5,0,0,tabCont)
+
+    -- content area
+    ContentArea=ni("Frame",{Size=caSz,Position=caPos,BackgroundTransparency=1,ClipsDescendants=true,ZIndex=3},MF)
+    for _,name in ipairs(tabDefs) do
+        if tabPages[name] then tabPages[name].pg.Parent=ContentArea end
     end
 
-    ContentArea=ni("Frame",{Size=caSz,Position=caPos,BackgroundTransparency=1,ClipsDescendants=true,ZIndex=3},MF)
-    for _,name in ipairs(tabDefs) do if tabPages[name] then tabPages[name].pg.Parent=ContentArea end end
-
+    -- build tab buttons
     for _,name in ipairs(tabDefs) do
-        local btnSz=isHoriz and UDim2.new(0,76,1,0) or UDim2.new(1,0,0,30)
         local btn=ni("TextButton",{
             Text=name,Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.tabIdle,
-            BackgroundTransparency=1,Size=btnSz,BorderSizePixel=0,ZIndex=7,AutoButtonColor=false,
+            BackgroundTransparency=1,Size=UDim2.new(1,0,0,30),BorderSizePixel=0,
+            ZIndex=7,AutoButtonColor=false,TextXAlignment=Enum.TextXAlignment.Left,
         },tabCont)
-        if isSide then btn.TextXAlignment=Enum.TextXAlignment.Left; mkPad(14,6,0,0,btn) end
-        local ind
-        if isHoriz then
-            ind=ni("Frame",{Size=UDim2.new(1,0,0,2),Position=UDim2.new(0,0,1,-2),BackgroundColor3=T.tabInd,BackgroundTransparency=1,BorderSizePixel=0,ZIndex=8},btn)
-        else
-            local xp=mode=="right" and UDim2.new(0,0,0,0) or UDim2.new(1,-2,0,0)
-            ind=ni("Frame",{Size=UDim2.new(0,2,1,0),Position=xp,BackgroundColor3=T.tabInd,BackgroundTransparency=1,BorderSizePixel=0,ZIndex=8},btn)
-        end
+        mkPad(14,6,0,0,btn)
+        -- indicator bar on the right edge
+        local ind=ni("Frame",{Size=UDim2.new(0,2,1,0),Position=UDim2.new(1,-2,0,0),BackgroundColor3=T.tabInd,BackgroundTransparency=1,BorderSizePixel=0,ZIndex=8},btn)
         navTabBtns[name]=btn; navTabInds[name]=ind
         REG_TABBTNS[name]=btn; REG_TABINDS[name]=ind
         btn.MouseEnter:Connect(function() if _ACTIVE_TAB~=name then tw(btn,{TextColor3=T.tabHover},0.08) end end)
@@ -262,59 +221,69 @@ selTab("Combat")
         btn.MouseButton1Click:Connect(function() selTab(name) end)
     end
 
-    if _ACTIVE_TAB then local prev=_ACTIVE_TAB; _ACTIVE_TAB=nil; selTab(prev) else selTab("combat") end
+    local prevTab=_ACTIVE_TAB; _ACTIVE_TAB=nil
+    selTab(prevTab or "combat")
 end
 
--- ============================================================
---   page factory (two-column scrolling layout)
--- ============================================================
+-- ═══════════════════════════════════════
+--   PAGE FACTORY (two-column scroll)
+-- ═══════════════════════════════════════
 local function mkPage()
     local pg=ni("Frame",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Visible=false},nil)
-    local L=ni("ScrollingFrame",{Size=UDim2.new(0.5,-1,1,0),BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=3,ScrollBarImageColor3=T.scrollbar,CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y},pg)
+    local L=ni("ScrollingFrame",{
+        Size=UDim2.new(0.5,-1,1,0),BackgroundTransparency=1,BorderSizePixel=0,
+        ScrollBarThickness=3,ScrollBarImageColor3=T.scrollbar,
+        CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y,
+    },pg)
     ni("UIListLayout",{Padding=UDim.new(0,0)},L); mkPad(12,10,8,8,L)
     ni("Frame",{Size=UDim2.new(0,1,1,0),Position=UDim2.new(0.5,0,0,0),BackgroundColor3=T.sep,BorderSizePixel=0},pg)
-    local R=ni("ScrollingFrame",{Size=UDim2.new(0.5,-1,1,0),Position=UDim2.new(0.5,1,0,0),BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=3,ScrollBarImageColor3=T.scrollbar,CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y},pg)
+    local R=ni("ScrollingFrame",{
+        Size=UDim2.new(0.5,-1,1,0),Position=UDim2.new(0.5,1,0,0),BackgroundTransparency=1,BorderSizePixel=0,
+        ScrollBarThickness=3,ScrollBarImageColor3=T.scrollbar,
+        CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y,
+    },pg)
     ni("UIListLayout",{Padding=UDim.new(0,0)},R); mkPad(10,12,8,8,R)
     return pg,L,R
 end
-for _,name in ipairs(tabDefs) do local pg,L,R=mkPage(); tabPages[name]={pg=pg,L=L,R=R} end
+for _,name in ipairs(tabDefs) do
+    local pg,L,R=mkPage(); tabPages[name]={pg=pg,L=L,R=R}
+end
 
--- ============================================================
---   color picker
--- ============================================================
+-- ═══════════════════════════════════════
+--   COLOR PICKER
+-- ═══════════════════════════════════════
 local activePicker=nil; local pickDismiss=nil
 local function closePicker()
     if activePicker then activePicker:Destroy(); activePicker=nil end
-    if pickDismiss then pickDismiss:Destroy(); pickDismiss=nil end
+    if pickDismiss  then pickDismiss:Destroy();  pickDismiss=nil  end
 end
 local function openColorPicker(anchor,startColor,onChange)
     closePicker()
     local h,s,v=Color3.toHSV(startColor)
     pickDismiss=ni("TextButton",{Text="",BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=58},MF)
     pickDismiss.MouseButton1Click:Connect(closePicker)
-    local pop=ni("Frame",{Size=UDim2.new(0,186,0,170),BackgroundColor3=T.panel,BorderSizePixel=0,ZIndex=60},MF)
-    mkCorner(9,pop); mkStroke(T.border,1.5,pop); activePicker=pop; mkPad(8,8,8,8,pop)
+    local pop=ni("Frame",{Size=UDim2.new(0,190,0,172),BackgroundColor3=T.panel,BorderSizePixel=0,ZIndex=60},MF)
+    mkCorner(10,pop); mkStroke(T.border,1.5,pop); activePicker=pop; mkPad(8,8,8,8,pop)
     task.defer(function()
         if not pop.Parent then return end
         local ap=anchor.AbsolutePosition; local mp=MF.AbsolutePosition
-        local rx=ap.X-mp.X-186; local ry=ap.Y-mp.Y-170
-        pop.Position=UDim2.new(0,math.max(4,math.min(rx,MF.AbsoluteSize.X-190)),0,math.max(40,math.min(ry,MF.AbsoluteSize.Y-174)))
+        pop.Position=UDim2.new(0,math.max(4,math.min(ap.X-mp.X-190,MF.AbsoluteSize.X-194)),0,math.max(40,math.min(ap.Y-mp.Y-172,MF.AbsoluteSize.Y-176)))
     end)
     local topRow=ni("Frame",{Size=UDim2.new(1,0,0,18),BackgroundTransparency=1,ZIndex=61},pop)
     local prev=ni("Frame",{Size=UDim2.new(0,26,1,0),BackgroundColor3=startColor,BorderSizePixel=0,ZIndex=62},topRow)
     mkCorner(4,prev); mkStroke(T.border,1,prev)
-    local hexBox=ni("TextBox",{Text=colorToHex(startColor),Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.text,BackgroundColor3=T.inputBg,BorderSizePixel=0,Size=UDim2.new(1,-32,1,0),Position=UDim2.new(0,30,0,0),TextXAlignment=Enum.TextXAlignment.Left,ZIndex=62,PlaceholderText="RRGGBB",PlaceholderColor3=T.textDim,ClearTextOnFocus=false},topRow)
+    local hexBox=ni("TextBox",{Text=colorToHex(startColor),Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.text,BackgroundColor3=T.inputBg,BorderSizePixel=0,Size=UDim2.new(1,-32,1,0),Position=UDim2.new(0,30,0,0),TextXAlignment=Enum.TextXAlignment.Left,ZIndex=62,ClearTextOnFocus=false},topRow)
     mkCorner(4,hexBox); mkPad(4,0,0,0,hexBox)
-    local svOuter=ni("Frame",{Size=UDim2.new(1,0,0,96),Position=UDim2.new(0,0,0,22),BackgroundColor3=Color3.fromHSV(h,1,1),BorderSizePixel=0,ZIndex=61},pop)
+    local svOuter=ni("Frame",{Size=UDim2.new(1,0,0,98),Position=UDim2.new(0,0,0,22),BackgroundColor3=Color3.fromHSV(h,1,1),BorderSizePixel=0,ZIndex=61},pop)
     mkCorner(5,svOuter)
     local wg=ni("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,ZIndex=62},svOuter)
-    ni("UIGradient",{Color=ColorSequence.new(Color3.new(1,1,1),Color3.new(1,1,1)),Transparency=NumberSequence.new{NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)}},wg)
+    ni("UIGradient",{Transparency=NumberSequence.new{NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)}},wg)
     local bg=ni("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=Color3.new(0,0,0),BorderSizePixel=0,ZIndex=63},svOuter)
-    ni("UIGradient",{Color=ColorSequence.new(Color3.new(0,0,0),Color3.new(0,0,0)),Transparency=NumberSequence.new{NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(1,0)},Rotation=90},bg)
+    ni("UIGradient",{Transparency=NumberSequence.new{NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(1,0)},Rotation=90},bg)
     local svKnob=ni("Frame",{Size=UDim2.new(0,10,0,10),Position=UDim2.new(s,-5,1-v,-5),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,ZIndex=65},svOuter)
     mkCorner(6,svKnob); mkStroke(Color3.new(0,0,0),1.5,svKnob)
     local svHit=ni("TextButton",{Text="",BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=66},svOuter)
-    local hueBar=ni("Frame",{Size=UDim2.new(1,0,0,10),Position=UDim2.new(0,0,1,-10),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,ZIndex=61},pop)
+    local hueBar=ni("Frame",{Size=UDim2.new(1,0,0,10),Position=UDim2.new(0,0,1,-12),BorderSizePixel=0,ZIndex=61},pop)
     mkCorner(4,hueBar)
     local hkps={}; for i=0,6 do hkps[i+1]=ColorSequenceKeypoint.new(i/6,Color3.fromHSV(i/6,1,1)) end
     ni("UIGradient",{Color=ColorSequence.new(hkps)},hueBar)
@@ -348,45 +317,45 @@ local function openColorPicker(anchor,startColor,onChange)
     end)
 end
 
--- ============================================================
---   keybind popup
--- ============================================================
+-- ═══════════════════════════════════════
+--   KEYBIND POPUP
+-- ═══════════════════════════════════════
 local activeKBPop=nil; local kbDismiss=nil
 local function closeKBPop()
     if activeKBPop then activeKBPop:Destroy(); activeKBPop=nil end
-    if kbDismiss then kbDismiss:Destroy(); kbDismiss=nil end
+    if kbDismiss   then kbDismiss:Destroy();   kbDismiss=nil   end
 end
 local function openKBPop(entry,anchor)
     closeKBPop(); closePicker()
     kbDismiss=ni("TextButton",{Text="",BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=48},MF)
     kbDismiss.MouseButton1Click:Connect(closeKBPop)
-    local pop=ni("Frame",{Size=UDim2.new(0,172,0,114),BackgroundColor3=T.panel,BorderSizePixel=0,ZIndex=50},MF)
+    local pop=ni("Frame",{Size=UDim2.new(0,174,0,118),BackgroundColor3=T.panel,BorderSizePixel=0,ZIndex=50},MF)
     mkCorner(8,pop); mkStroke(T.border,1.5,pop); activeKBPop=pop; mkPad(8,8,7,7,pop)
     task.defer(function()
         if not pop.Parent then return end
         local ap=anchor.AbsolutePosition; local mp=MF.AbsolutePosition
         local rx=ap.X-mp.X; local ry=ap.Y-mp.Y+anchor.AbsoluteSize.Y+4
-        pop.Position=UDim2.new(0,math.max(4,math.min(rx,MF.AbsoluteSize.X-176)),0,math.max(40,math.min(ry,MF.AbsoluteSize.Y-118)))
+        pop.Position=UDim2.new(0,math.max(4,math.min(rx,MF.AbsoluteSize.X-178)),0,math.max(40,math.min(ry,MF.AbsoluteSize.Y-122)))
     end)
     local hdr=ni("TextLabel",{Text="bind key",Font=Enum.Font.GothamBold,TextSize=9,TextColor3=T.secHdr,BackgroundTransparency=1,Size=UDim2.new(1,0,0,14),ZIndex=51},pop)
     table.insert(REG_TEXT,{lbl=hdr,role="sec"})
-    local kf=ni("Frame",{Size=UDim2.new(1,0,0,24),Position=UDim2.new(0,0,0,16),BackgroundColor3=T.inputBg,BorderSizePixel=0,ZIndex=51},pop)
+    local kf=ni("Frame",{Size=UDim2.new(1,0,0,24),Position=UDim2.new(0,0,0,18),BackgroundColor3=T.inputBg,BorderSizePixel=0,ZIndex=51},pop)
     mkCorner(5,kf); mkStroke(T.border,1,kf)
     local kl=ni("TextLabel",{Text="[ "..getKeyName(entry.key).." ]",Font=Enum.Font.Gotham,TextSize=10,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=52},kf)
     local kListen=false
     ni("TextButton",{Text="",BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=53},kf).MouseButton1Click:Connect(function()
-        if kListen then return end; kListen=true; kl.Text="[ press any key ]"; kl.TextColor3=T.textDim
+        if kListen then return end; kListen=true; kl.Text="[ press key... ]"; kl.TextColor3=T.textDim
         local cc; cc=UserInputService.InputBegan:Connect(function(inp)
             if inp.UserInputType==Enum.UserInputType.Keyboard then
                 entry.key=inp.KeyCode; kl.Text="[ "..inp.KeyCode.Name.." ]"; kl.TextColor3=T.text; kListen=false; cc:Disconnect()
             end
         end)
     end)
-    local mRow=ni("Frame",{Size=UDim2.new(1,0,0,24),Position=UDim2.new(0,0,0,44),BackgroundTransparency=1,ZIndex=51},pop)
+    local mRow=ni("Frame",{Size=UDim2.new(1,0,0,24),Position=UDim2.new(0,0,0,46),BackgroundTransparency=1,ZIndex=51},pop)
     ni("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,3)},mRow)
     for _,m in ipairs({"Toggle","Hold","Always","Off"}) do
         local isA=entry.mode==m
-        local mb=ni("TextButton",{Text=m,Font=Enum.Font.Gotham,TextSize=8,TextColor3=isA and Color3.new(1,1,1) or T.textDim,BackgroundColor3=isA and T.accent or T.cbOff,BorderSizePixel=0,Size=UDim2.new(0,34,1,0),AutoButtonColor=false,ZIndex=52},mRow)
+        local mb=ni("TextButton",{Text=m,Font=Enum.Font.Gotham,TextSize=8,TextColor3=isA and Color3.new(1,1,1) or T.textDim,BackgroundColor3=isA and T.accent or T.cbOff,BorderSizePixel=0,Size=UDim2.new(0,35,1,0),AutoButtonColor=false,ZIndex=52},mRow)
         mkCorner(3,mb)
         mb.MouseButton1Click:Connect(function()
             entry.mode=m
@@ -397,9 +366,9 @@ local function openKBPop(entry,anchor)
     end
 end
 
--- ============================================================
---   widget library
--- ============================================================
+-- ═══════════════════════════════════════
+--   WIDGET LIBRARY
+-- ═══════════════════════════════════════
 local function secHdr(parent,text)
     local f=ni("Frame",{Size=UDim2.new(1,0,0,22),BackgroundTransparency=1},parent)
     local lbl=ni("TextLabel",{Text=text:upper(),Font=Enum.Font.GothamBold,TextSize=9,TextColor3=T.secHdr,BackgroundTransparency=1,Size=UDim2.new(1,0,0,14),TextXAlignment=Enum.TextXAlignment.Left},f)
@@ -407,7 +376,6 @@ local function secHdr(parent,text)
     table.insert(REG_SECHDR,{lbl=lbl,line=line}); return f
 end
 
--- checkbox row — supports optional keybind chip
 local function cbRow(parent,label,default,onChange,kbEntry)
     local tog=default or false
     local f=ni("Frame",{Size=UDim2.new(1,0,0,24),BackgroundTransparency=1},parent)
@@ -416,7 +384,7 @@ local function cbRow(parent,label,default,onChange,kbEntry)
     local bs=mkStroke(tog and T.cbOn or T.cbBorder,1,box)
     local ck=ni("TextLabel",{Text="✓",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.cbMark,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),TextTransparency=tog and 0 or 1},box)
     table.insert(REG_CB,{box=box,bs=bs,ck=ck,getState=function() return tog end})
-    local chipW=kbEntry and 26 or 0
+    local chipW = kbEntry and 28 or 0
     local lbl=ni("TextLabel",{Text=label,Font=Enum.Font.Gotham,TextSize=11,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(1,-chipW-20,1,0),Position=UDim2.new(0,20,0,0),TextXAlignment=Enum.TextXAlignment.Left},f)
     table.insert(REG_TEXT,{lbl=lbl,role="text"})
     if kbEntry then
@@ -434,15 +402,9 @@ local function cbRow(parent,label,default,onChange,kbEntry)
         if onChange then onChange(tog) end
         if kbEntry then kbEntry.state=tog end
     end)
-    if kbEntry then
-        hitBtn.MouseButton2Click:Connect(function()
-            local chip=f:FindFirstChildWhichIsA("TextButton"); if chip then openKBPop(kbEntry,chip) end
-        end)
-    end
     return f,function() return tog end,function(v) tog=v; tw(box,{BackgroundColor3=v and T.cbOn or T.cbOff},0.1); tw(bs,{Color=v and T.cbOn or T.cbBorder},0.1); tw(ck,{TextTransparency=v and 0 or 1},0.08) end
 end
 
--- checkbox with a color swatch on the right
 local function cbColRow(parent,label,default,defCol,onTog,onCol)
     local tog=default or false; local cur=defCol or T.accent
     local f=ni("Frame",{Size=UDim2.new(1,0,0,24),BackgroundTransparency=1},parent)
@@ -450,7 +412,7 @@ local function cbColRow(parent,label,default,defCol,onTog,onCol)
     local bs=mkStroke(tog and T.cbOn or T.cbBorder,1,box)
     local ck=ni("TextLabel",{Text="✓",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.cbMark,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),TextTransparency=tog and 0 or 1},box)
     table.insert(REG_CB,{box=box,bs=bs,ck=ck,getState=function() return tog end})
-    local lbl=ni("TextLabel",{Text=label,Font=Enum.Font.Gotham,TextSize=11,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(1,-42,1,0),Position=UDim2.new(0,20,0,0),TextXAlignment=Enum.TextXAlignment.Left},f)
+    local lbl=ni("TextLabel",{Text=label,Font=Enum.Font.Gotham,TextSize=11,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(1,-44,1,0),Position=UDim2.new(0,20,0,0),TextXAlignment=Enum.TextXAlignment.Left},f)
     table.insert(REG_TEXT,{lbl=lbl,role="text"})
     local cube=ni("Frame",{Size=UDim2.new(0,16,0,16),Position=UDim2.new(1,-16,0.5,-8),BackgroundColor3=cur,BorderSizePixel=0},f); mkCorner(4,cube); mkStroke(T.border,1,cube)
     ni("TextButton",{Text="",BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=2},cube).MouseButton1Click:Connect(function()
@@ -463,12 +425,10 @@ local function cbColRow(parent,label,default,defCol,onTog,onCol)
     return f
 end
 
--- standalone color swatch row
-local REG_COL={}
 local function colRow(parent,label,defCol,onChange)
     local cur=defCol or T.accent
     local f=ni("Frame",{Size=UDim2.new(1,0,0,24),BackgroundTransparency=1},parent)
-    local lbl=ni("TextLabel",{Text=label,Font=Enum.Font.Gotham,TextSize=11,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(1,-24,1,0),TextXAlignment=Enum.TextXAlignment.Left},f)
+    local lbl=ni("TextLabel",{Text=label,Font=Enum.Font.Gotham,TextSize=11,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(1,-26,1,0),TextXAlignment=Enum.TextXAlignment.Left},f)
     table.insert(REG_TEXT,{lbl=lbl,role="text"})
     local cube=ni("Frame",{Size=UDim2.new(0,16,0,16),Position=UDim2.new(1,-16,0.5,-8),BackgroundColor3=cur,BorderSizePixel=0},f); mkCorner(4,cube); mkStroke(T.border,1,cube)
     ni("TextButton",{Text="",BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=2},cube).MouseButton1Click:Connect(function()
@@ -478,7 +438,6 @@ local function colRow(parent,label,defCol,onChange)
     table.insert(REG_COL,entry); return f
 end
 
--- slider row
 local function sldRow(parent,label,mn,mx,def,fmtFn,onChange)
     local val=def; fmtFn=fmtFn or tostring
     local f=ni("Frame",{Size=UDim2.new(1,0,0,38),BackgroundTransparency=1},parent)
@@ -490,7 +449,7 @@ local function sldRow(parent,label,mn,mx,def,fmtFn,onChange)
     local track=ni("Frame",{Size=UDim2.new(1,0,0,4),Position=UDim2.new(0,0,0,24),BackgroundColor3=T.slTrack,BorderSizePixel=0},f); mkCorner(2,track)
     local r0=math.clamp((val-mn)/math.max(mx-mn,0.001),0,1)
     local fill=ni("Frame",{Size=UDim2.new(r0,0,1,0),BackgroundColor3=T.slFill,BorderSizePixel=0},track); mkCorner(2,fill)
-    local knob=ni("Frame",{Size=UDim2.new(0,11,0,11),Position=UDim2.new(r0,-5,0.5,-5),BackgroundColor3=T.slKnob,BorderSizePixel=0},track); mkCorner(6,knob)
+    local knob=ni("Frame",{Size=UDim2.new(0,12,0,12),Position=UDim2.new(r0,-6,0.5,-6),BackgroundColor3=T.slKnob,BorderSizePixel=0},track); mkCorner(7,knob)
     local ks=mkStroke(T.slFill,1.5,knob)
     table.insert(REG_SL,{track=track,fill=fill,knob=knob,ks=ks})
     local hitBtn=ni("TextButton",{Text="",BackgroundTransparency=1,Size=UDim2.new(1,0,7,0),Position=UDim2.new(0,0,-1.5,0),ZIndex=5},track)
@@ -500,21 +459,20 @@ local function sldRow(parent,label,mn,mx,def,fmtFn,onChange)
     UserInputService.InputChanged:Connect(function(i)
         if drag and i.UserInputType==Enum.UserInputType.MouseMovement then
             local rt=math.clamp((i.Position.X-track.AbsolutePosition.X)/math.max(track.AbsoluteSize.X,1),0,1)
-            val=mn+rt*(mx-mn); if mx-mn==math.floor(mx-mn) then val=math.floor(val+0.5) end
-            fill.Size=UDim2.new(rt,0,1,0); knob.Position=UDim2.new(rt,-5,0.5,-5); vLbl.Text=fmtFn(val)
+            val=mn+rt*(mx-mn); if (mx-mn)==math.floor(mx-mn) then val=math.floor(val+0.5) end
+            fill.Size=UDim2.new(rt,0,1,0); knob.Position=UDim2.new(rt,-6,0.5,-6); vLbl.Text=fmtFn(val)
             if onChange then onChange(val) end
         end
     end)
     return f
 end
 
--- single-select dropdown
 local function dropRow(parent,label,opts,def,onChange)
     local sel=def or opts[1]; local open=false
     local f=ni("Frame",{Size=UDim2.new(1,0,0,26),BackgroundTransparency=1,ClipsDescendants=false,ZIndex=10},parent)
-    local lbl=ni("TextLabel",{Text=label,Font=Enum.Font.Gotham,TextSize=11,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(0.42,0,1,0),TextXAlignment=Enum.TextXAlignment.Left,ZIndex=10},f)
+    local lbl=ni("TextLabel",{Text=label,Font=Enum.Font.Gotham,TextSize=11,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(0.40,0,1,0),TextXAlignment=Enum.TextXAlignment.Left,ZIndex=10},f)
     table.insert(REG_TEXT,{lbl=lbl,role="text"})
-    local df=ni("Frame",{Size=UDim2.new(0.56,0,0,20),Position=UDim2.new(0.44,0,0.5,-10),BackgroundColor3=T.dropBg,BorderSizePixel=0,ZIndex=10},f)
+    local df=ni("Frame",{Size=UDim2.new(0.58,0,0,20),Position=UDim2.new(0.42,0,0.5,-10),BackgroundColor3=T.dropBg,BorderSizePixel=0,ZIndex=10},f)
     mkCorner(5,df); mkStroke(T.border,1,df)
     local sLbl=ni("TextLabel",{Text=sel,Font=Enum.Font.Gotham,TextSize=10,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(1,-14,1,0),Position=UDim2.new(0,6,0,0),TextXAlignment=Enum.TextXAlignment.Left,ZIndex=11},df)
     ni("TextLabel",{Text="▾",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(0,12,1,0),Position=UDim2.new(1,-13,0,0),ZIndex=11},df)
@@ -539,7 +497,6 @@ local function dropRow(parent,label,opts,def,onChange)
     return f
 end
 
--- multi-select dropdown
 local function multiDrop(parent,label,opts,current,onChange)
     local open=false
     local f=ni("Frame",{Size=UDim2.new(1,0,0,26),BackgroundTransparency=1,ClipsDescendants=false,ZIndex=10},parent)
@@ -572,7 +529,6 @@ local function multiDrop(parent,label,opts,current,onChange)
     return f
 end
 
--- text input row
 local function textRow(parent,label,default,placeholder,onChange)
     local f=ni("Frame",{Size=UDim2.new(1,0,0,26),BackgroundTransparency=1},parent)
     local lbl=ni("TextLabel",{Text=label,Font=Enum.Font.Gotham,TextSize=11,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(0.38,0,1,0),TextXAlignment=Enum.TextXAlignment.Left},f)
@@ -586,16 +542,15 @@ end
 local BODYPARTS={"Head","Torso","HumanoidRootPart","LeftArm","RightArm","LeftLeg","RightLeg"}
 local TB_PARTS={"Head","Torso","LeftArm","RightArm","LeftLeg","RightLeg","All"}
 
--- ============================================================
+-- ═══════════════════════════════════════
 --   TAB: COMBAT
--- ============================================================
+-- ═══════════════════════════════════════
 local function buildCombat()
     local L,R=tabPages["combat"].L,tabPages["combat"].R
     secHdr(L,"aimbot")
-    cbRow(L,"enabled",false,function(v) AB.Enabled=v end,abKB)
+    cbRow(L,"enabled",false,function(v) AB.Enabled=v; if not v then AB._stickyTarget=nil; AB._stickyPl=nil end end,abKB)
     dropRow(L,"mode",{"CamLock","Mouse"},"CamLock",function(v) AB.Mode=v end)
-    spacer(L,2)
-    secHdr(L,"checks")
+    secHdr(L,"ab checks")
     cbRow(L,"visible check",false,function(v) AB.VisCheck=v end)
     cbRow(L,"team check",true,function(v) AB.TeamCheck=v end)
     cbRow(L,"sticky aim",false,function(v) AB.StickyAim=v; if not v then AB._stickyTarget=nil; AB._stickyPl=nil end end)
@@ -603,14 +558,14 @@ local function buildCombat()
     sldRow(L,"min hp",0,100,0,function(v) return v.."hp" end,function(v) AB.HealthMin=v end)
     cbRow(L,"knock check",false,function(v) AB.KnockCheck=v end)
     spacer(L,2)
-    secHdr(L,"fov")
+    secHdr(L,"ab fov")
     cbRow(L,"show fov",true,function(v) AB.ShowFOV=v end)
     cbRow(L,"fov fill",false,function(v) AB.FOVFill=v end)
     cbRow(L,"follow mouse",false,function(v) AB.FOVMouse=v end)
     sldRow(L,"fov size",10,600,150,nil,function(v) AB.FOVSize=v end)
     colRow(L,"fov color",AB.FOVColor,function(c) AB.FOVColor=c end)
     spacer(L,2)
-    secHdr(L,"settings")
+    secHdr(L,"ab settings")
     sldRow(L,"smoothness",1,30,5,nil,function(v) AB.Smooth=v end)
     multiDrop(L,"target parts",BODYPARTS,AB.AimParts,function(s) AB.AimParts=s end)
     textRow(L,"dist limit","inf","number",function(v) local n=tonumber(v); AB.DistLimit=n or math.huge end)
@@ -620,15 +575,13 @@ local function buildCombat()
     ni("UIListLayout",{Padding=UDim.new(0,0)},predCont); mkPad(8,0,0,0,predCont)
     sldRow(predCont,"predict x",0,20,5,nil,function(v) AB.PredX=v end)
     sldRow(predCont,"predict y",0,20,5,nil,function(v) AB.PredY=v end)
-    cbRow(L,"enable prediction",false,function(v)
-        AB.Prediction=v; tw(predCont,{Size=UDim2.new(1,0,0,v and 82 or 0)},0.15)
-    end)
+    cbRow(L,"enable prediction",false,function(v) AB.Prediction=v; tw(predCont,{Size=UDim2.new(1,0,0,v and 82 or 0)},0.15) end)
 
-    -- right column: silent aim, triggerbot, vsync
     secHdr(R,"silent aim")
+    ni("TextLabel",{Text="uses hookmetamethod to silently\nredirect FireServer shot calls",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,24),TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left},R)
     cbRow(R,"enabled",false,function(v) SA.Enabled=v end,saKB)
     cbRow(R,"team check",true,function(v) SA.TeamCheck=v end)
-    cbRow(R,"follow mouse",false,function(v) SA.FOVMouse=v end)
+    cbRow(R,"follow mouse",true,function(v) SA.FOVMouse=v end)
     spacer(R,2)
     secHdr(R,"sa fov")
     cbRow(R,"show fov",false,function(v) SA.ShowFOV=v end)
@@ -642,75 +595,66 @@ local function buildCombat()
     cbColRow(R,"tracer",false,SA.TracerColor,function(v) SA.Tracer=v end,function(c) SA.TracerColor=c end)
     spacer(R,2)
     secHdr(R,"sa prediction")
-    local saPredCont=ni("Frame",{Size=UDim2.new(1,0,0,0),BackgroundTransparency=1,ClipsDescendants=true},R)
-    ni("UIListLayout",{Padding=UDim.new(0,0)},saPredCont); mkPad(8,0,0,0,saPredCont)
-    sldRow(saPredCont,"predict x",0,20,5,nil,function(v) SA.PredX=v end)
-    sldRow(saPredCont,"predict y",0,20,5,nil,function(v) SA.PredY=v end)
-    cbRow(R,"enable prediction",false,function(v)
-        SA.Prediction=v; tw(saPredCont,{Size=UDim2.new(1,0,0,v and 82 or 0)},0.15)
-    end)
+    local saPCont=ni("Frame",{Size=UDim2.new(1,0,0,0),BackgroundTransparency=1,ClipsDescendants=true},R)
+    ni("UIListLayout",{Padding=UDim.new(0,0)},saPCont); mkPad(8,0,0,0,saPCont)
+    sldRow(saPCont,"predict x",0,20,5,nil,function(v) SA.PredX=v end)
+    sldRow(saPCont,"predict y",0,20,5,nil,function(v) SA.PredY=v end)
+    cbRow(R,"enable prediction",false,function(v) SA.Prediction=v; tw(saPCont,{Size=UDim2.new(1,0,0,v and 82 or 0)},0.15) end)
     spacer(R,4)
     secHdr(R,"triggerbot")
     cbRow(R,"enabled",false,function(v) TB.Enabled=v end,tbKB)
     cbRow(R,"visible check",false,function(v) TB.VisCheck=v end)
     cbRow(R,"team check",true,function(v) TB.TeamCheck=v end)
     sldRow(R,"fire delay",0,500,50,function(v) return v.."ms" end,function(v) TB.Delay=v/1000 end)
-    sldRow(R,"hitbox multiplier",1,5,1,function(v) return "x"..string.format("%.1f",v) end,function(v) TB.HitboxMult=v end)
+    sldRow(R,"hitbox mult",1,5,1,function(v) return "x"..string.format("%.1f",v) end,function(v) TB.HitboxMult=v end)
     multiDrop(R,"hit parts",TB_PARTS,TB.HitParts,function(s) TB.HitParts=s end)
     cbColRow(R,"visualize hitbox",false,TB.VisColor,function(v) TB.Visualize=v end,function(c) TB.VisColor=c end)
-    spacer(R,4)
-    secHdr(R,"vsync (velocity)")
-    cbRow(R,"enabled",false,function(v) VS.Enabled=v end,vsKB)
-    sldRow(R,"speed",10,500,60,nil,function(v) VS.Speed=v end)
 end
 
--- ============================================================
+-- ═══════════════════════════════════════
 --   TAB: VISUALS
--- ============================================================
+-- ═══════════════════════════════════════
 local function buildVisuals()
     local L,R=tabPages["visuals"].L,tabPages["visuals"].R
-
     secHdr(L,"esp")
     cbRow(L,"enabled",false,function(v) ESP.Enabled=v end)
     cbRow(L,"visible only",false,function(v) ESP.VisOnly=v end)
-    cbRow(L,"self esp",false,function(v) ESP.SelfESP=v end)
     textRow(L,"dist limit","inf","number",function(v) local n=tonumber(v); ESP.DistLimit=n or math.huge end)
     spacer(L,2)
-    secHdr(L,"box esp")
-    cbRow(L,"box",false,function(v) ESP.BoxEnabled=v end)
+    secHdr(L,"box")
+    cbRow(L,"box",true,function(v) ESP.BoxEnabled=v end)
     dropRow(L,"box type",{"Corner","2D","3D"},"Corner",function(v) ESP.BoxMode=v end)
     colRow(L,"box color",ESP.BoxColor,function(c) ESP.BoxColor=c end)
-    sldRow(L,"box thickness",0.5,4,1.5,function(v) return string.format("%.1f",v) end,function(v) ESP.BoxThick=v end)
-    spacer(L,2)
+    sldRow(L,"thickness",0.5,4,1.5,function(v) return string.format("%.1f",v) end,function(v) ESP.BoxThick=v end)
     secHdr(L,"box fill")
     cbRow(L,"fill enabled",false,function(v) ESP.BoxFill=v end)
-    colRow(L,"fill color",ESP.BoxFillColor,function(c) ESP.BoxFillColor=c end)
-    sldRow(L,"fill transparency",0,100,82,function(v) return v.."%" end,function(v) ESP.BoxFillTrans=v/100 end)
+    colRow(L,"fill color",ESP.BoxFillColor or Color3.fromRGB(100,50,200),function(c) ESP.BoxFillColor=c end)
+    sldRow(L,"fill alpha",0,100,85,function(v) return v.."%" end,function(v) ESP.BoxFillTrans=v/100 end)
     spacer(L,2)
-    secHdr(L,"names")
-    cbColRow(L,"names",false,ESP.NameColor,function(v) ESP.Names=v end,function(c) ESP.NameColor=c end)
+    secHdr(L,"name & health")
+    cbColRow(L,"names",true,ESP.NameColor,function(v) ESP.Names=v end,function(c) ESP.NameColor=c end)
     dropRow(L,"name mode",{"Display","Username","Both"},"Display",function(v) ESP.NameMode=v end)
+    cbColRow(L,"health bar",true,ESP.HealthColor,function(v) ESP.Health=v end,function(c) ESP.HealthColor=c end)
     spacer(L,2)
     secHdr(L,"overlays")
-    cbColRow(L,"health bar",false,ESP.HealthColor,function(v) ESP.Health=v end,function(c) ESP.HealthColor=c end)
-    cbColRow(L,"distance",false,ESP.DistColor,function(v) ESP.Distance=v end,function(c) ESP.DistColor=c end)
+    cbColRow(L,"distance",true,ESP.DistColor,function(v) ESP.Distance=v end,function(c) ESP.DistColor=c end)
+    cbColRow(L,"tracer",false,ESP.TracerColor,function(v) ESP.Tracer=v end,function(c) ESP.TracerColor=c end)
+    dropRow(L,"tracer origin",{"Bottom","Top","Middle","Mouse"},"Bottom",function(v) ESP.TracerOrigin=v end)
+    spacer(L,2)
+    secHdr(L,"skeleton & dots")
     cbColRow(L,"skeleton",false,ESP.SkeletonColor,function(v) ESP.Skeleton=v end,function(c) ESP.SkeletonColor=c end)
-    cbColRow(L,"head dot",false,ESP.HeadDotColor,function(v) ESP.HeadDot=v end,function(c) ESP.HeadDotColor=c end)
+    cbColRow(L,"head dot",true,ESP.HeadDotColor,function(v) ESP.HeadDot=v end,function(c) ESP.HeadDotColor=c end)
+    -- FIXED: head dot fill is now a separate toggle (not filled by default)
     cbRow(L,"head dot fill",false,function(v) ESP.HeadDotFill=v end)
     spacer(L,2)
     secHdr(L,"weapon esp")
-    cbRow(L,"show weapon",false,function(v) ESP.Weapon=v end)
-    colRow(L,"weapon color",ESP.WeaponColor,function(c) ESP.WeaponColor=c end)
-    spacer(L,2)
-    secHdr(L,"tracer")
-    cbColRow(L,"tracer",false,ESP.TracerColor,function(v) ESP.Tracer=v end,function(c) ESP.TracerColor=c end)
-    dropRow(L,"origin",{"Bottom","Top","Middle","Mouse"},"Bottom",function(v) ESP.TracerOrigin=v end)
+    cbColRow(L,"show weapon",true,ESP.WeaponColor or Color3.fromRGB(255,200,100),function(v) ESP.Weapon=v end,function(c) ESP.WeaponColor=c end)
+    ni("TextLabel",{Text="shows equipped tool below player.\ndisplays 'None' when nothing held.",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,24),TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left},L)
 
-    -- right column
+    -- right col
     secHdr(R,"chams")
     cbRow(R,"enabled",false,function(v) Chams.Enabled=v; refreshChams() end)
     cbRow(R,"through walls",true,function(v) Chams.ThroughWalls=v; refreshChams() end)
-    cbRow(R,"glow",false,function(v) Chams.Glow=v; refreshChams() end)
     colRow(R,"fill color",Chams.FillColor,function(c) Chams.FillColor=c; refreshChams() end)
     colRow(R,"outline color",Chams.OutlineColor,function(c) Chams.OutlineColor=c; refreshChams() end)
     sldRow(R,"fill alpha",0,100,50,function(v) return v.."%" end,function(v) Chams.FillTransp=v/100; refreshChams() end)
@@ -719,28 +663,19 @@ local function buildVisuals()
     secHdr(R,"hit chams")
     cbColRow(R,"enabled",false,HitChams.Color,function(v) HitChams.Enabled=v end,function(c) HitChams.Color=c end)
     sldRow(R,"duration",0.05,1,0.18,function(v) return string.format("%.2fs",v) end,function(v) HitChams.Duration=v end)
-    secHdr(R,"hit sounds")
-    cbRow(R,"enabled",false,function(v) HitChams.Sound=v end)
-    dropRow(R,"sound",{"bell","click","pop","ding"},"bell",function(v)
-        local ids={bell="rbxassetid://4612481101",click="rbxassetid://6042053626",pop="rbxassetid://5028823456",ding="rbxassetid://4612481101"}
-        HitChams.SoundId=ids[v] or ids.bell
-    end)
-    sldRow(R,"volume",0,1,0.6,function(v) return string.format("%.1f",v) end,function(v) HitChams.Volume=v end)
+    cbRow(R,"hit sound",false,function(v) HitChams.Sound=v end)
     spacer(R,2)
     secHdr(R,"hitbox extender")
     cbRow(R,"enabled",false,function(v) HBX.Enabled=v; if not v then clearHBX() end end)
     sldRow(R,"size",1,20,5,function(v) return "x"..v end,function(v) HBX.Size=v; clearHBX() end)
     sldRow(R,"transparency",0,1,1,function(v) return string.format("%.1f",v) end,function(v) HBX.Transparency=v end)
-    multiDrop(R,"parts",{"Head","HumanoidRootPart","LeftUpperLeg","RightUpperLeg","LeftLowerLeg","RightLowerLeg","UpperTorso","Torso"},
-        HBX.Parts,function(s) HBX.Parts=s; clearHBX() end)
+    multiDrop(R,"parts",{"Head","HumanoidRootPart","LeftUpperLeg","RightUpperLeg","LeftLowerLeg","RightLowerLeg","UpperTorso","Torso"},HBX.Parts,function(s) HBX.Parts=s; clearHBX() end)
     spacer(R,2)
     secHdr(R,"local esp")
     cbRow(R,"enabled",false,function(v) LocalESP.Enabled=v; applyLocalESP() end)
-    dropRow(R,"material",{"Neon","ForceField"},"Neon",function(v)
-        LocalESP.Material=v; if LocalESP.Enabled then LocalESP._applied=false; applyLocalESP() end
-    end)
+    dropRow(R,"material",{"Neon","ForceField"},"Neon",function(v) LocalESP.Material=v; if LocalESP.Enabled then LocalESP._applied=false; applyLocalESP() end end)
     colRow(R,"color",LocalESP.Color,function(c) LocalESP.Color=c; if LocalESP.Enabled then LocalESP._applied=false; applyLocalESP() end end)
-    spacer(R,4)
+    spacer(R,2)
     secHdr(R,"world fx")
     cbRow(R,"no fog",false,function(v) WorldFX.NoFog=v end)
     cbRow(R,"fullbright",false,function(v) WorldFX.Fullbright=v end)
@@ -754,9 +689,7 @@ local function buildVisuals()
     dropRow(R,"weather",{"None","Rain","Fog"},"None",function(v) WorldFX.WeatherMode=v; setWeather(v) end)
     spacer(R,4)
     secHdr(R,"skybox")
-    dropRow(R,"preset",{"default","black storm","pink sky","blue storm","blue galaxy","night city","void","cherry blossom"},"default",function(v)
-        pcall(function() applySkybox(v) end)
-    end)
+    dropRow(R,"preset",{"default","black storm","pink sky","blue storm","blue galaxy","night city","void","cherry blossom","sunset"},"default",function(v) applySkybox(v) end)
     spacer(R,4)
     secHdr(R,"cursor")
     cbRow(R,"custom cursor",false,function(v) CursorDraw.Enabled=v end)
@@ -770,16 +703,31 @@ local function buildVisuals()
     spacer(R,4)
     secHdr(R,"watermark")
     cbRow(R,"show watermark",false,function(v) if setWatermark then setWatermark(v) end end)
+    ni("TextLabel",{Text="format:  lunatic.cc ♥ | live | gamename\ndraggable — click and drag to reposition",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,24),TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left},R)
     spacer(R,2)
     secHdr(R,"hit notifs")
     cbRow(R,"enabled",false,function(v) HitNotifs.Enabled=v end)
 end
 
--- ============================================================
+-- ═══════════════════════════════════════
 --   TAB: MOD
--- ============================================================
+-- ═══════════════════════════════════════
 local function buildMod()
     local L,R=tabPages["mod"].L,tabPages["mod"].R
+    secHdr(L,"cframe movement")
+    ni("TextLabel",{Text="replaces vsync — moves via direct\nCFrame, no velocity artifacts",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,24),TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left},L)
+    cbRow(L,"enabled",false,function(v) CFrameMove.Enabled=v end,cfmKB)
+    sldRow(L,"speed",10,500,60,nil,function(v) CFrameMove.Speed=v end)
+    spacer(L,2)
+    secHdr(L,"cframe fly")
+    ni("TextLabel",{Text="WASD+camera to fly • Space=up • Ctrl=down",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,14),TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left},L)
+    cbRow(L,"enabled",false,function(v) CFrameFly.Enabled=v end,cffKB)
+    sldRow(L,"speed",10,1000,80,nil,function(v) CFrameFly.Speed=v end)
+    spacer(L,2)
+    secHdr(L,"velocity fly (legacy)")
+    cbRow(L,"enabled",false,function(v) VelocityFly.Enabled=v end,vfKB)
+    sldRow(L,"speed",10,1000,80,nil,function(v) VelocityFly.Speed=v end)
+    spacer(L,2)
     secHdr(L,"walk speed")
     cbRow(L,"enabled",false,function(v)
         WalkMod.Enabled=v; wsKB.state=v
@@ -801,145 +749,100 @@ local function buildMod()
     cbRow(L,"inf jump",false,function(v) JumpMod.InfJump=v end)
     cbRow(L,"super jump",false,function(v) MiscMov.SuperJump=v end)
     spacer(L,2)
-    secHdr(L,"velocity flight")
-    cbRow(L,"enabled",false,function(v) VFlight.Enabled=v end,vfKB)
-    sldRow(L,"speed",10,1000,80,nil,function(v) VFlight.Speed=v end)
-    spacer(L,2)
     secHdr(L,"spinbot")
     cbRow(L,"enabled",false,function(v) SpinBot.Enabled=v end,sbKB)
     sldRow(L,"speed",1,60,18,nil,function(v) SpinBot.Speed=v end)
-    spacer(L,2)
-    secHdr(L,"misc movement")
-    cbRow(L,"anti trip",false,function(v) MiscMov.AntiTrip=v end)
-    cbRow(L,"no slowdown",false,function(v) MiscMov.NoSlowdown=v end)
-    cbRow(L,"no jump cooldown",false,function(v) MiscMov.NoJumpCooldown=v end)
-    cbRow(L,"no fall damage",false,function(v) MiscMov.NoFallDmg=v end)
-    cbRow(L,"noclip",false,function(v) MiscMov.Noclip=v end)
-    spacer(L,2)
-    secHdr(L,"fake lag")
-    cbRow(L,"enabled",false,function(v) FakeLag.Enabled=v; setFakeLag(v,FakeLag.Frames) end)
-    sldRow(L,"frames",0,30,6,nil,function(v) FakeLag.Frames=v end)
-    spacer(L,2)
-    secHdr(L,"character")
-    textRow(L,"change avatar","","user id",function(v) CharChg.UserId=v end)
-    local applyBtn=ni("TextButton",{Text="apply",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.text,BackgroundColor3=T.accentDim,BorderSizePixel=0,Size=UDim2.new(1,0,0,22),AutoButtonColor=false},L)
-    mkCorner(5,applyBtn); applyBtn.MouseButton1Click:Connect(function() applyCharChg(CharChg.UserId) end)
-    spacer(L,2)
-    secHdr(L,"anti afk")
-    cbRow(L,"enabled",false,function(v) MiscMov.AntiAFK=v end)
 
-    -- right column
+    -- right col
+    secHdr(R,"misc movement")
+    cbRow(R,"anti trip",false,function(v) MiscMov.AntiTrip=v end)
+    cbRow(R,"no slowdown",false,function(v) MiscMov.NoSlowdown=v end)
+    cbRow(R,"no jump cooldown",false,function(v) MiscMov.NoJumpCooldown=v end)
+    cbRow(R,"no fall damage",false,function(v) MiscMov.NoFallDmg=v end)
+    cbRow(R,"noclip",false,function(v) MiscMov.Noclip=v end)
+    cbRow(R,"anti afk",false,function(v) MiscMov.AntiAFK=v end)
+    spacer(R,2)
     secHdr(R,"camera")
     sldRow(R,"field of view",50,130,70,nil,function(v) Cam.FieldOfView=v end)
     spacer(R,2)
+    secHdr(R,"fake lag")
+    cbRow(R,"enabled",false,function(v) FakeLag.Enabled=v; setFakeLag(v,FakeLag.Frames) end)
+    sldRow(R,"frames",0,30,6,nil,function(v) FakeLag.Frames=v end)
+    spacer(R,2)
+    secHdr(R,"character")
+    textRow(R,"avatar id","","user id",function(v) CharChg.UserId=v end)
+    local applyBtn=ni("TextButton",{Text="apply character",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.text,BackgroundColor3=T.accentDim,BorderSizePixel=0,Size=UDim2.new(1,0,0,24),AutoButtonColor=false},R)
+    mkCorner(5,applyBtn)
+    applyBtn.MouseEnter:Connect(function() tw(applyBtn,{BackgroundColor3=T.accent},0.07) end)
+    applyBtn.MouseLeave:Connect(function() tw(applyBtn,{BackgroundColor3=T.accentDim},0.07) end)
+    applyBtn.MouseButton1Click:Connect(function() applyCharChg(CharChg.UserId) end)
+    spacer(R,2)
     secHdr(R,"arsenal / dahood")
-    ni("TextLabel",{Text="rapid fire + inf ammo works on arsenal/dahood gun systems.\nviewmodel chams targets the arms model in workspace.",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,30),TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left},R)
-    cbRow(R,"rapid fire",false,function(v)
-        Arsenal.RapidFire=v
-        pcall(function()
-            if LP.Character then
-                for _,t in ipairs(LP.Character:GetChildren()) do
-                    if t:IsA("Tool") then
-                        pcall(function() t:SetAttribute("FireDelay",v and 0.001 or nil) end)
-                        for _,c in ipairs(t:GetDescendants()) do
-                            if c:IsA("NumberValue") and (c.Name=="FireDelay" or c.Name=="Delay" or c.Name=="CoolDown") then
-                                c.Value=v and 0 or c.Value
-                            end
-                        end
-                    end
-                end
-            end
-        end)
-    end)
+    cbRow(R,"rapid fire",false,function(v) Arsenal.RapidFire=v end)
     cbRow(R,"infinite ammo",false,function(v)
         Arsenal.InfAmmo=v
-        if v then
-            RunService.Heartbeat:Connect(function()
-                if not Arsenal.InfAmmo then return end
-                local c=LP.Character; if not c then return end
-                for _,t in ipairs(c:GetChildren()) do
-                    if t:IsA("Tool") then
-                        for _,s in ipairs(t:GetDescendants()) do
-                            if s:IsA("IntValue") and (s.Name=="Ammo" or s.Name=="ammo") then s.Value=9999 end
-                        end
+        if v then RunService.Heartbeat:Connect(function()
+            if not Arsenal.InfAmmo then return end
+            local c=LP.Character; if not c then return end
+            for _,t in ipairs(c:GetChildren()) do
+                if t:IsA("Tool") then
+                    for _,s in ipairs(t:GetDescendants()) do
+                        if s:IsA("IntValue") and (s.Name=="Ammo" or s.Name=="ammo") then s.Value=9999 end
                     end
                 end
-            end)
-        end
-    end)
-    cbRow(R,"viewmodel chams",false,function(v)
-        Arsenal.ViewmodelChams=v
-        pcall(function()
-            local vm=workspace:FindFirstChild("Arms") or workspace:FindFirstChild("Viewmodel")
-            if vm then
-                if v then
-                    local hl=Instance.new("Highlight"); hl.Adornee=vm; hl.FillColor=Chams.FillColor
-                    hl.OutlineColor=Chams.OutlineColor; hl.FillTransparency=0.3; hl.Parent=vm
-                else for _,h in ipairs(vm:GetChildren()) do if h:IsA("Highlight") then h:Destroy() end end end
             end
-        end)
+        end) end
     end)
 end
 
--- ============================================================
+-- ═══════════════════════════════════════
 --   TAB: PLAYERS
--- ============================================================
+-- ═══════════════════════════════════════
 local function buildPlayers()
     local L,R=tabPages["players"].L,tabPages["players"].R
     secHdr(L,"player list")
     local selPl=nil
-    local infoPanel=ni("Frame",{Size=UDim2.new(1,0,0,0),BackgroundColor3=T.panel,BorderSizePixel=0,Visible=false},L)
+    local infoPanel=ni("Frame",{Size=UDim2.new(1,0,0,0),BackgroundColor3=T.panel,BorderSizePixel=0,Visible=false,ClipsDescendants=true},L)
     mkCorner(6,infoPanel); mkStroke(T.border,1,infoPanel)
     local infoName=ni("TextLabel",{Text="",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.tabActive,BackgroundTransparency=1,Size=UDim2.new(1,-8,0,18),Position=UDim2.new(0,6,0,2),TextXAlignment=Enum.TextXAlignment.Left},infoPanel)
-    local infoSub=ni("TextLabel",{Text="",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,-8,0,14),Position=UDim2.new(0,6,0,18),TextXAlignment=Enum.TextXAlignment.Left},infoPanel)
-    local actionRow=ni("Frame",{Size=UDim2.new(1,-12,0,24),Position=UDim2.new(0,6,0,34),BackgroundTransparency=1},infoPanel)
+    local infoSub=ni("TextLabel",{Text="",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,-8,0,14),Position=UDim2.new(0,6,0,20),TextXAlignment=Enum.TextXAlignment.Left},infoPanel)
+    local actionRow=ni("Frame",{Size=UDim2.new(1,-12,0,24),Position=UDim2.new(0,6,0,36),BackgroundTransparency=1},infoPanel)
     ni("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,4)},actionRow)
-    local specBtn=ni("TextButton",{Text="spectate",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.text,BackgroundColor3=T.accentDim,BorderSizePixel=0,Size=UDim2.new(0,58,1,0),AutoButtonColor=false},actionRow); mkCorner(4,specBtn)
-    local unspecBtn=ni("TextButton",{Text="unspectate",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.text,BackgroundColor3=Color3.fromRGB(50,35,80),BorderSizePixel=0,Size=UDim2.new(0,74,1,0),AutoButtonColor=false},actionRow); mkCorner(4,unspecBtn)
-    local flingBtn=ni("TextButton",{Text="fling",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.text,BackgroundColor3=Color3.fromRGB(120,30,30),BorderSizePixel=0,Size=UDim2.new(0,40,1,0),AutoButtonColor=false},actionRow); mkCorner(4,flingBtn)
+    local specBtn=ni("TextButton",{Text="spectate",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.text,BackgroundColor3=T.accentDim,BorderSizePixel=0,Size=UDim2.new(0,62,1,0),AutoButtonColor=false},actionRow); mkCorner(4,specBtn)
+    local unspecBtn=ni("TextButton",{Text="unspectate",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.text,BackgroundColor3=Color3.fromRGB(38,25,62),BorderSizePixel=0,Size=UDim2.new(0,78,1,0),AutoButtonColor=false},actionRow); mkCorner(4,unspecBtn)
+    local flingBtn=ni("TextButton",{Text="fling",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.text,BackgroundColor3=Color3.fromRGB(115,25,25),BorderSizePixel=0,Size=UDim2.new(0,40,1,0),AutoButtonColor=false},actionRow); mkCorner(4,flingBtn)
     local _specConn=nil
     specBtn.MouseButton1Click:Connect(function()
         if not selPl or not selPl.Character then return end
-        pcall(function()
-            if _specConn then _specConn:Disconnect(); _specConn=nil end
-            local root=selPl.Character:FindFirstChild("HumanoidRootPart"); if not root then return end
-            Cam.CameraType=Enum.CameraType.Scriptable
-            _specConn=RunService.RenderStepped:Connect(function()
-                if not selPl or not selPl.Character then
-                    _specConn:Disconnect(); _specConn=nil; Cam.CameraType=Enum.CameraType.Custom; return
-                end
-                local r=selPl.Character:FindFirstChild("HumanoidRootPart")
-                if r then
-                    local offset=r.CFrame*CFrame.new(0,4,-12)
-                    Cam.CFrame=CFrame.new(offset.Position,r.Position+Vector3.new(0,1,0))
-                end
-            end)
+        if _specConn then _specConn:Disconnect(); _specConn=nil end
+        Cam.CameraType=Enum.CameraType.Scriptable
+        _specConn=RunService.RenderStepped:Connect(function()
+            if not selPl or not selPl.Character then _specConn:Disconnect(); _specConn=nil; Cam.CameraType=Enum.CameraType.Custom; return end
+            local r=selPl.Character:FindFirstChild("HumanoidRootPart")
+            if r then Cam.CFrame=CFrame.new(r.CFrame*Vector3.new(0,4,-12),r.Position+Vector3.new(0,1.5,0)) end
         end)
     end)
     unspecBtn.MouseButton1Click:Connect(function()
-        pcall(function()
-            if _specConn then _specConn:Disconnect(); _specConn=nil end
-            local c=LP.Character; local hum=c and c:FindFirstChild("Humanoid")
-            Cam.CameraType=Enum.CameraType.Custom; if hum then Cam.CameraSubject=hum end
-        end)
+        if _specConn then _specConn:Disconnect(); _specConn=nil end
+        local c=LP.Character; local hum=c and c:FindFirstChild("Humanoid")
+        Cam.CameraType=Enum.CameraType.Custom; if hum then Cam.CameraSubject=hum end
     end)
     flingBtn.MouseButton1Click:Connect(function()
         if not selPl or not selPl.Character then return end
-        pcall(function()
-            local root=selPl.Character:FindFirstChild("HumanoidRootPart")
-            if root then root.AssemblyLinearVelocity=Vector3.new(math.random(-1,1)*9999,9999,math.random(-1,1)*9999) end
-        end)
+        local root=selPl.Character:FindFirstChild("HumanoidRootPart")
+        if root then root.AssemblyLinearVelocity=Vector3.new(math.random(-1,1)*9999,9999,math.random(-1,1)*9999) end
     end)
+    spacer(L,4)
     local plList=ni("Frame",{Size=UDim2.new(1,0,0,0),BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y},L)
     ni("UIListLayout",{Padding=UDim.new(0,3)},plList)
     local function rebuildList()
         for _,ch in ipairs(plList:GetChildren()) do if not ch:IsA("UIListLayout") then ch:Destroy() end end
         for _,pl in ipairs(Players:GetPlayers()) do
             if pl==LP then continue end
-            local pb=ni("TextButton",{Text=pl.DisplayName.."  @"..pl.Name,Font=Enum.Font.Gotham,TextSize=10,TextColor3=T.text,BackgroundColor3=T.cbOff,BorderSizePixel=0,Size=UDim2.new(1,0,0,24),TextXAlignment=Enum.TextXAlignment.Left,AutoButtonColor=false},plList)
+            local pb=ni("TextButton",{Text=pl.DisplayName.."  @"..pl.Name,Font=Enum.Font.Gotham,TextSize=10,TextColor3=T.text,BackgroundColor3=T.cbOff,BorderSizePixel=0,Size=UDim2.new(1,0,0,26),TextXAlignment=Enum.TextXAlignment.Left,AutoButtonColor=false},plList)
             mkCorner(5,pb); mkPad(8,0,0,0,pb)
             pb.MouseEnter:Connect(function() tw(pb,{BackgroundColor3=T.accentDim},0.08) end)
-            pb.MouseLeave:Connect(function() tw(pb,{BackgroundColor3=selPl==pl and T.accent or T.cbOff},0.08) end)
+            pb.MouseLeave:Connect(function() tw(pb,{BackgroundColor3=selPl==pl and T.accentDim or T.cbOff},0.08) end)
             pb.MouseButton1Click:Connect(function()
                 selPl=pl
                 for _,c in ipairs(plList:GetChildren()) do if c:IsA("TextButton") then tw(c,{BackgroundColor3=T.cbOff},0.08) end end
@@ -947,23 +850,19 @@ local function buildPlayers()
                 local hum=pl.Character and pl.Character:FindFirstChild("Humanoid")
                 local ping="?"; pcall(function() ping=math.floor(pl:GetNetworkPing()*1000) end)
                 infoName.Text=pl.DisplayName.." (@"..pl.Name..")"
-                infoSub.Text=string.format("hp: %s/%s  •  ping: %sms  •  team: %s",
-                    hum and math.floor(hum.Health) or "?",hum and math.floor(hum.MaxHealth) or "?",
-                    ping,pl.Team and pl.Team.Name or "none")
-                infoPanel.Size=UDim2.new(1,0,0,66); infoPanel.Visible=true
+                infoSub.Text=string.format("hp: %s/%s  •  ping: %sms  •  team: %s",hum and math.floor(hum.Health) or "?",hum and math.floor(hum.MaxHealth) or "?",ping,pl.Team and pl.Team.Name or "none")
+                infoPanel.Size=UDim2.new(1,0,0,68); infoPanel.Visible=true
             end)
         end
     end
     rebuildList()
     Players.PlayerAdded:Connect(function() task.delay(0.2,rebuildList) end)
     Players.PlayerRemoving:Connect(function() task.delay(0.2,rebuildList) end)
-
-    -- right col: appearance
+    -- right col
     secHdr(R,"appearance")
-    cbRow(R,"remove hats",false,function(v)
-        if not v then return end
+    sldRow(R,"transparency",0,100,0,function(v) return v.."%" end,function(v)
         local c=LP.Character; if not c then return end
-        for _,a in ipairs(c:GetChildren()) do if a:IsA("Accessory") then a:Destroy() end end
+        for _,p in ipairs(c:GetDescendants()) do if p:IsA("BasePart") then p.LocalTransparencyModifier=v/100 end end
     end)
     dropRow(R,"body color",{"Default","Black","White","Red","Blue","Purple","Pink","Green"},"Default",function(v)
         local c=LP.Character; if not c then return end
@@ -971,132 +870,45 @@ local function buildPlayers()
         if not cm[v] then return end
         for _,p in ipairs(c:GetChildren()) do if p:IsA("BasePart") then p.BrickColor=cm[v] end end
     end)
-    sldRow(R,"transparency",0,100,0,function(v) return v.."%" end,function(v)
+    cbRow(R,"remove accessories",false,function(v)
+        if not v then return end
         local c=LP.Character; if not c then return end
-        for _,p in ipairs(c:GetDescendants()) do if p:IsA("BasePart") then p.LocalTransparencyModifier=v/100 end end
+        for _,a in ipairs(c:GetChildren()) do if a:IsA("Accessory") then a:Destroy() end end
     end)
 end
 
--- ============================================================
+-- ═══════════════════════════════════════
 --   THEMES
--- ============================================================
+-- ═══════════════════════════════════════
 local THEMES={
-    ["lunatic (default)"]={
-        bg=Color3.fromRGB(10,9,15),panel=Color3.fromRGB(15,13,21),navBg=Color3.fromRGB(7,6,12),
-        border=Color3.fromRGB(50,30,84),sep=Color3.fromRGB(26,16,44),
-        tabActive=Color3.fromRGB(218,196,255),tabIdle=Color3.fromRGB(78,58,110),tabInd=Color3.fromRGB(128,76,220),
-        brand=Color3.fromRGB(115,70,208),text=Color3.fromRGB(190,176,216),textDim=Color3.fromRGB(82,68,112),
-        secHdr=Color3.fromRGB(120,80,196),accent=Color3.fromRGB(118,70,218),accentDim=Color3.fromRGB(56,30,110),
-        cbOn=Color3.fromRGB(118,70,218),cbOff=Color3.fromRGB(17,14,27),cbBorder=Color3.fromRGB(50,30,84),
-        slTrack=Color3.fromRGB(17,14,27),slFill=Color3.fromRGB(118,70,218),slKnob=Color3.fromRGB(210,190,250),
-    },
-    ["midnight red"]={
-        bg=Color3.fromRGB(13,8,8),panel=Color3.fromRGB(20,11,11),navBg=Color3.fromRGB(9,5,5),
-        border=Color3.fromRGB(100,22,22),sep=Color3.fromRGB(40,14,14),
-        tabActive=Color3.fromRGB(255,190,190),tabIdle=Color3.fromRGB(110,50,50),tabInd=Color3.fromRGB(220,50,50),
-        brand=Color3.fromRGB(220,60,60),text=Color3.fromRGB(220,190,190),textDim=Color3.fromRGB(100,60,60),
-        secHdr=Color3.fromRGB(200,70,70),accent=Color3.fromRGB(200,40,40),accentDim=Color3.fromRGB(90,20,20),
-        cbOn=Color3.fromRGB(210,45,45),cbOff=Color3.fromRGB(22,10,10),cbBorder=Color3.fromRGB(100,22,22),
-        slTrack=Color3.fromRGB(22,10,10),slFill=Color3.fromRGB(200,40,40),slKnob=Color3.fromRGB(255,160,160),
-    },
-    ["ocean"]={
-        bg=Color3.fromRGB(6,12,20),panel=Color3.fromRGB(9,18,30),navBg=Color3.fromRGB(4,9,16),
-        border=Color3.fromRGB(18,60,110),sep=Color3.fromRGB(10,30,55),
-        tabActive=Color3.fromRGB(140,210,255),tabIdle=Color3.fromRGB(40,90,140),tabInd=Color3.fromRGB(40,160,240),
-        brand=Color3.fromRGB(40,160,240),text=Color3.fromRGB(160,210,240),textDim=Color3.fromRGB(50,90,130),
-        secHdr=Color3.fromRGB(50,160,230),accent=Color3.fromRGB(30,140,220),accentDim=Color3.fromRGB(14,55,100),
-        cbOn=Color3.fromRGB(30,140,220),cbOff=Color3.fromRGB(8,18,32),cbBorder=Color3.fromRGB(18,60,110),
-        slTrack=Color3.fromRGB(8,18,32),slFill=Color3.fromRGB(30,140,220),slKnob=Color3.fromRGB(120,200,255),
-    },
-    ["forest"]={
-        bg=Color3.fromRGB(7,13,8),panel=Color3.fromRGB(10,18,11),navBg=Color3.fromRGB(5,9,6),
-        border=Color3.fromRGB(22,72,30),sep=Color3.fromRGB(12,36,16),
-        tabActive=Color3.fromRGB(160,240,170),tabIdle=Color3.fromRGB(46,100,55),tabInd=Color3.fromRGB(50,190,80),
-        brand=Color3.fromRGB(60,200,90),text=Color3.fromRGB(170,230,180),textDim=Color3.fromRGB(55,100,65),
-        secHdr=Color3.fromRGB(60,190,80),accent=Color3.fromRGB(45,175,70),accentDim=Color3.fromRGB(16,60,26),
-        cbOn=Color3.fromRGB(45,175,70),cbOff=Color3.fromRGB(8,18,10),cbBorder=Color3.fromRGB(22,72,30),
-        slTrack=Color3.fromRGB(8,18,10),slFill=Color3.fromRGB(45,175,70),slKnob=Color3.fromRGB(140,235,160),
-    },
-    ["rose gold"]={
-        bg=Color3.fromRGB(18,10,12),panel=Color3.fromRGB(26,14,17),navBg=Color3.fromRGB(12,7,9),
-        border=Color3.fromRGB(110,55,65),sep=Color3.fromRGB(50,22,28),
-        tabActive=Color3.fromRGB(255,200,210),tabIdle=Color3.fromRGB(120,65,78),tabInd=Color3.fromRGB(220,110,130),
-        brand=Color3.fromRGB(225,120,140),text=Color3.fromRGB(240,200,210),textDim=Color3.fromRGB(115,70,80),
-        secHdr=Color3.fromRGB(220,115,135),accent=Color3.fromRGB(210,100,125),accentDim=Color3.fromRGB(90,35,48),
-        cbOn=Color3.fromRGB(210,100,125),cbOff=Color3.fromRGB(22,10,14),cbBorder=Color3.fromRGB(110,55,65),
-        slTrack=Color3.fromRGB(22,10,14),slFill=Color3.fromRGB(210,100,125),slKnob=Color3.fromRGB(255,190,205),
-    },
-    ["pure black"]={
-        bg=Color3.fromRGB(4,4,4),panel=Color3.fromRGB(8,8,8),navBg=Color3.fromRGB(2,2,2),
-        border=Color3.fromRGB(40,40,40),sep=Color3.fromRGB(18,18,18),
-        tabActive=Color3.fromRGB(230,230,230),tabIdle=Color3.fromRGB(80,80,80),tabInd=Color3.fromRGB(180,180,180),
-        brand=Color3.fromRGB(200,200,200),text=Color3.fromRGB(210,210,210),textDim=Color3.fromRGB(80,80,80),
-        secHdr=Color3.fromRGB(170,170,170),accent=Color3.fromRGB(160,160,160),accentDim=Color3.fromRGB(45,45,45),
-        cbOn=Color3.fromRGB(160,160,160),cbOff=Color3.fromRGB(12,12,12),cbBorder=Color3.fromRGB(40,40,40),
-        slTrack=Color3.fromRGB(12,12,12),slFill=Color3.fromRGB(160,160,160),slKnob=Color3.fromRGB(220,220,220),
-    },
-    ["cherry blossom"]={
-        bg=Color3.fromRGB(20,10,16),panel=Color3.fromRGB(28,13,22),navBg=Color3.fromRGB(13,6,11),
-        border=Color3.fromRGB(160,60,110),sep=Color3.fromRGB(55,18,40),
-        tabActive=Color3.fromRGB(255,185,225),tabIdle=Color3.fromRGB(130,55,100),tabInd=Color3.fromRGB(240,80,160),
-        brand=Color3.fromRGB(245,90,165),text=Color3.fromRGB(250,190,225),textDim=Color3.fromRGB(125,60,100),
-        secHdr=Color3.fromRGB(240,80,160),accent=Color3.fromRGB(230,65,150),accentDim=Color3.fromRGB(95,22,62),
-        cbOn=Color3.fromRGB(230,65,150),cbOff=Color3.fromRGB(22,8,16),cbBorder=Color3.fromRGB(160,60,110),
-        slTrack=Color3.fromRGB(22,8,16),slFill=Color3.fromRGB(230,65,150),slKnob=Color3.fromRGB(255,175,220),
-    },
+    ["lunatic (default)"]={bg=Color3.fromRGB(10,9,15),panel=Color3.fromRGB(15,13,21),navBg=Color3.fromRGB(7,6,12),border=Color3.fromRGB(50,30,84),sep=Color3.fromRGB(26,16,44),tabActive=Color3.fromRGB(218,196,255),tabIdle=Color3.fromRGB(78,58,110),tabInd=Color3.fromRGB(128,76,220),tabHover=Color3.fromRGB(130,95,190),brand=Color3.fromRGB(115,70,208),text=Color3.fromRGB(190,176,216),textDim=Color3.fromRGB(82,68,112),secHdr=Color3.fromRGB(120,80,196),accent=Color3.fromRGB(118,70,218),accentDim=Color3.fromRGB(56,30,110),accentHover=Color3.fromRGB(155,100,245),cbOn=Color3.fromRGB(118,70,218),cbOff=Color3.fromRGB(17,14,27),cbBorder=Color3.fromRGB(50,30,84),cbMark=Color3.fromRGB(255,255,255),slTrack=Color3.fromRGB(17,14,27),slFill=Color3.fromRGB(118,70,218),slKnob=Color3.fromRGB(210,190,250),dropBg=Color3.fromRGB(14,11,22),dropHover=Color3.fromRGB(56,30,110),scrollbar=Color3.fromRGB(88,50,165),inputBg=Color3.fromRGB(13,11,21)},
+    ["midnight red"]={bg=Color3.fromRGB(13,8,8),panel=Color3.fromRGB(20,11,11),navBg=Color3.fromRGB(9,5,5),border=Color3.fromRGB(100,22,22),sep=Color3.fromRGB(40,14,14),tabActive=Color3.fromRGB(255,190,190),tabIdle=Color3.fromRGB(110,50,50),tabInd=Color3.fromRGB(220,50,50),tabHover=Color3.fromRGB(165,60,60),brand=Color3.fromRGB(220,60,60),text=Color3.fromRGB(220,190,190),textDim=Color3.fromRGB(100,60,60),secHdr=Color3.fromRGB(200,70,70),accent=Color3.fromRGB(200,40,40),accentDim=Color3.fromRGB(90,20,20),accentHover=Color3.fromRGB(235,60,60),cbOn=Color3.fromRGB(210,45,45),cbOff=Color3.fromRGB(22,10,10),cbBorder=Color3.fromRGB(100,22,22),cbMark=Color3.fromRGB(255,255,255),slTrack=Color3.fromRGB(22,10,10),slFill=Color3.fromRGB(200,40,40),slKnob=Color3.fromRGB(255,160,160),dropBg=Color3.fromRGB(18,8,8),dropHover=Color3.fromRGB(90,20,20),scrollbar=Color3.fromRGB(180,40,40),inputBg=Color3.fromRGB(16,7,7)},
+    ["ocean"]={bg=Color3.fromRGB(6,12,20),panel=Color3.fromRGB(9,18,30),navBg=Color3.fromRGB(4,9,16),border=Color3.fromRGB(18,60,110),sep=Color3.fromRGB(10,30,55),tabActive=Color3.fromRGB(140,210,255),tabIdle=Color3.fromRGB(40,90,140),tabInd=Color3.fromRGB(40,160,240),tabHover=Color3.fromRGB(40,115,175),brand=Color3.fromRGB(40,160,240),text=Color3.fromRGB(160,210,240),textDim=Color3.fromRGB(50,90,130),secHdr=Color3.fromRGB(50,160,230),accent=Color3.fromRGB(30,140,220),accentDim=Color3.fromRGB(14,55,100),accentHover=Color3.fromRGB(55,175,250),cbOn=Color3.fromRGB(30,140,220),cbOff=Color3.fromRGB(8,18,32),cbBorder=Color3.fromRGB(18,60,110),cbMark=Color3.fromRGB(255,255,255),slTrack=Color3.fromRGB(8,18,32),slFill=Color3.fromRGB(30,140,220),slKnob=Color3.fromRGB(120,200,255),dropBg=Color3.fromRGB(6,14,24),dropHover=Color3.fromRGB(14,55,100),scrollbar=Color3.fromRGB(30,120,200),inputBg=Color3.fromRGB(6,14,24)},
+    ["forest"]={bg=Color3.fromRGB(7,13,8),panel=Color3.fromRGB(10,18,11),navBg=Color3.fromRGB(5,9,6),border=Color3.fromRGB(22,72,30),sep=Color3.fromRGB(12,36,16),tabActive=Color3.fromRGB(160,240,170),tabIdle=Color3.fromRGB(46,100,55),tabInd=Color3.fromRGB(50,190,80),tabHover=Color3.fromRGB(44,130,58),brand=Color3.fromRGB(60,200,90),text=Color3.fromRGB(170,230,180),textDim=Color3.fromRGB(55,100,65),secHdr=Color3.fromRGB(60,190,80),accent=Color3.fromRGB(45,175,70),accentDim=Color3.fromRGB(16,60,26),accentHover=Color3.fromRGB(65,210,90),cbOn=Color3.fromRGB(45,175,70),cbOff=Color3.fromRGB(8,18,10),cbBorder=Color3.fromRGB(22,72,30),cbMark=Color3.fromRGB(255,255,255),slTrack=Color3.fromRGB(8,18,10),slFill=Color3.fromRGB(45,175,70),slKnob=Color3.fromRGB(140,235,160),dropBg=Color3.fromRGB(6,14,8),dropHover=Color3.fromRGB(16,60,26),scrollbar=Color3.fromRGB(40,160,65),inputBg=Color3.fromRGB(6,14,8)},
+    ["rose gold"]={bg=Color3.fromRGB(18,10,12),panel=Color3.fromRGB(26,14,17),navBg=Color3.fromRGB(12,7,9),border=Color3.fromRGB(110,55,65),sep=Color3.fromRGB(50,22,28),tabActive=Color3.fromRGB(255,200,210),tabIdle=Color3.fromRGB(120,65,78),tabInd=Color3.fromRGB(220,110,130),tabHover=Color3.fromRGB(170,80,102),brand=Color3.fromRGB(225,120,140),text=Color3.fromRGB(240,200,210),textDim=Color3.fromRGB(115,70,80),secHdr=Color3.fromRGB(220,115,135),accent=Color3.fromRGB(210,100,125),accentDim=Color3.fromRGB(90,35,48),accentHover=Color3.fromRGB(240,130,150),cbOn=Color3.fromRGB(210,100,125),cbOff=Color3.fromRGB(22,10,14),cbBorder=Color3.fromRGB(110,55,65),cbMark=Color3.fromRGB(255,255,255),slTrack=Color3.fromRGB(22,10,14),slFill=Color3.fromRGB(210,100,125),slKnob=Color3.fromRGB(255,190,205),dropBg=Color3.fromRGB(16,8,11),dropHover=Color3.fromRGB(90,35,48),scrollbar=Color3.fromRGB(195,95,120),inputBg=Color3.fromRGB(16,8,11)},
+    ["pure black"]={bg=Color3.fromRGB(4,4,4),panel=Color3.fromRGB(9,9,9),navBg=Color3.fromRGB(2,2,2),border=Color3.fromRGB(40,40,40),sep=Color3.fromRGB(18,18,18),tabActive=Color3.fromRGB(230,230,230),tabIdle=Color3.fromRGB(80,80,80),tabInd=Color3.fromRGB(180,180,180),tabHover=Color3.fromRGB(120,120,120),brand=Color3.fromRGB(200,200,200),text=Color3.fromRGB(210,210,210),textDim=Color3.fromRGB(80,80,80),secHdr=Color3.fromRGB(170,170,170),accent=Color3.fromRGB(160,160,160),accentDim=Color3.fromRGB(45,45,45),accentHover=Color3.fromRGB(200,200,200),cbOn=Color3.fromRGB(160,160,160),cbOff=Color3.fromRGB(12,12,12),cbBorder=Color3.fromRGB(40,40,40),cbMark=Color3.fromRGB(255,255,255),slTrack=Color3.fromRGB(12,12,12),slFill=Color3.fromRGB(160,160,160),slKnob=Color3.fromRGB(220,220,220),dropBg=Color3.fromRGB(9,9,9),dropHover=Color3.fromRGB(45,45,45),scrollbar=Color3.fromRGB(140,140,140),inputBg=Color3.fromRGB(9,9,9)},
+    ["cherry blossom"]={bg=Color3.fromRGB(20,10,16),panel=Color3.fromRGB(28,13,22),navBg=Color3.fromRGB(13,6,11),border=Color3.fromRGB(160,60,110),sep=Color3.fromRGB(55,18,40),tabActive=Color3.fromRGB(255,185,225),tabIdle=Color3.fromRGB(130,55,100),tabInd=Color3.fromRGB(240,80,160),tabHover=Color3.fromRGB(185,52,120),brand=Color3.fromRGB(245,90,165),text=Color3.fromRGB(250,190,225),textDim=Color3.fromRGB(125,60,100),secHdr=Color3.fromRGB(240,80,160),accent=Color3.fromRGB(230,65,150),accentDim=Color3.fromRGB(95,22,62),accentHover=Color3.fromRGB(255,95,175),cbOn=Color3.fromRGB(230,65,150),cbOff=Color3.fromRGB(22,8,16),cbBorder=Color3.fromRGB(160,60,110),cbMark=Color3.fromRGB(255,255,255),slTrack=Color3.fromRGB(22,8,16),slFill=Color3.fromRGB(230,65,150),slKnob=Color3.fromRGB(255,175,220),dropBg=Color3.fromRGB(16,6,13),dropHover=Color3.fromRGB(95,22,62),scrollbar=Color3.fromRGB(215,60,145),inputBg=Color3.fromRGB(16,6,13)},
 }
-
-local _colToTKey={}
 
 local function applyTheme(name)
     local th=THEMES[name]; if not th then return end
     for k,v in pairs(th) do T[k]=v end
-    if not T.panel then T.panel=T.bg end
-    if not T.inputBg then T.inputBg=T.navBg end
-    if not T.dropBg then T.dropBg=T.navBg end
-    if not T.dropHover then T.dropHover=T.accentDim end
-    if not T.scrollbar then T.scrollbar=T.accent end
-    if not T.tabHover then T.tabHover=T.accentDim end
-
+    -- safe defaults for any missing keys
+    T.inputBg=T.inputBg or T.navBg; T.dropBg=T.dropBg or T.navBg
+    T.dropHover=T.dropHover or T.accentDim; T.scrollbar=T.scrollbar or T.accent
+    T.tabHover=T.tabHover or T.accentDim; T.accentHover=T.accentHover or T.accent
+    T.cbMark=T.cbMark or Color3.new(1,1,1)
     pcall(function()
-        MF.BackgroundColor3=T.bg; mfStroke.Color=T.border
-        if NavBar then NavBar.BackgroundColor3=T.navBg end
+        tw(MF,{BackgroundColor3=T.bg},0.15)
+        mfStroke.Color=T.border
+        if NavBar then tw(NavBar,{BackgroundColor3=T.navBg},0.15) end
     end)
-
-    -- walk all descendants and apply color by attribute tag
-    pcall(function()
-        for _,inst in ipairs(MF:GetDescendants()) do
-            pcall(function()
-                local tag=inst:GetAttribute("ltheme"); if not tag then return end
-                if tag=="bg"         then inst.BackgroundColor3=T.bg
-                elseif tag=="panel"      then inst.BackgroundColor3=T.panel
-                elseif tag=="navBg"      then inst.BackgroundColor3=T.navBg
-                elseif tag=="inputBg"    then inst.BackgroundColor3=T.inputBg
-                elseif tag=="dropBg"     then inst.BackgroundColor3=T.dropBg
-                elseif tag=="border"     then if inst:IsA("UIStroke") then inst.Color=T.border else inst.BackgroundColor3=T.border end
-                elseif tag=="sep"        then inst.BackgroundColor3=T.sep
-                elseif tag=="accent"     then inst.BackgroundColor3=T.accent
-                elseif tag=="accentDim"  then inst.BackgroundColor3=T.accentDim
-                elseif tag=="scrollbar"  then pcall(function() inst.ScrollBarImageColor3=T.scrollbar end)
-                elseif tag=="slTrack"    then inst.BackgroundColor3=T.slTrack end
-            end)
-        end
-    end)
-
-    for _,entry in ipairs(_colToTKey) do
-        local col=T[entry.key]
-        if col and entry.ref and entry.ref.cube and entry.ref.cube.Parent then
-            entry.ref.cube.BackgroundColor3=col
-            entry.ref.setColor(col)
-            if entry.ref.onChange then pcall(entry.ref.onChange,col) end
-        end
-    end
     refreshTheme()
 end
 
--- ============================================================
+-- ═══════════════════════════════════════
 --   TAB: OPTIONS
--- ============================================================
+-- ═══════════════════════════════════════
 local function buildOptions()
     local L,R=tabPages["options"].L,tabPages["options"].R
     secHdr(L,"ui")
@@ -1108,28 +920,26 @@ local function buildOptions()
     sldRow(L,"blur",0,24,8,nil,function(v) T.blurAmt=v; blurFX.Size=v end)
     spacer(L,2)
     secHdr(L,"theme colors")
-    colRow(L,"background",T.bg,function(c) T.bg=c; MF.BackgroundColor3=c end)
-    colRow(L,"nav bg",T.navBg,function(c) T.navBg=c; if NavBar then NavBar.BackgroundColor3=c end end)
+    colRow(L,"background",T.bg,function(c) T.bg=c; tw(MF,{BackgroundColor3=c},0.1) end)
+    colRow(L,"nav bg",T.navBg,function(c) T.navBg=c; if NavBar then tw(NavBar,{BackgroundColor3=c},0.1) end end)
     colRow(L,"border",T.border,function(c) T.border=c; mfStroke.Color=c end)
-    colRow(L,"accent",T.accent,function(c) T.accent=c end)
+    colRow(L,"accent",T.accent,function(c) T.accent=c; refreshTheme() end)
+    colRow(L,"text",T.text,function(c) T.text=c; refreshTheme() end)
     spacer(L,2)
     secHdr(L,"toggle keybind")
-    local kf=ni("Frame",{Size=UDim2.new(1,0,0,24),BackgroundColor3=T.inputBg,BorderSizePixel=0},L)
+    local kf=ni("Frame",{Size=UDim2.new(1,0,0,26),BackgroundColor3=T.inputBg,BorderSizePixel=0},L)
     mkCorner(5,kf); mkStroke(T.border,1,kf)
-    local kl=ni("TextLabel",{Text="[ "..(uiToggleKB and getKeyName(uiToggleKB.key) or "—").." ]",
-    Font=Enum.Font.Gotham,TextSize=10,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=2},kf)
+    local kl=ni("TextLabel",{Text="[ "..(uiToggleKB and getKeyName(uiToggleKB.key) or "RightShift").." ]",Font=Enum.Font.Gotham,TextSize=10,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=2},kf)
     local kListen=false
     ni("TextButton",{Text="",BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=3},kf).MouseButton1Click:Connect(function()
-        if kListen then return end; kListen=true; kl.Text="[ press any key ]"; kl.TextColor3=T.textDim
+        if kListen then return end; kListen=true; kl.Text="[ press key... ]"; kl.TextColor3=T.textDim
         local cc; cc=UserInputService.InputBegan:Connect(function(inp)
             if inp.UserInputType==Enum.UserInputType.Keyboard then
-                uiToggleKB.key=inp.KeyCode; kl.Text="[ "..inp.KeyCode.Name.." ]"
-                kl.TextColor3=T.text; kListen=false; cc:Disconnect()
+                uiToggleKB.key=inp.KeyCode; kl.Text="[ "..inp.KeyCode.Name.." ]"; kl.TextColor3=T.text; kListen=false; cc:Disconnect()
             end
         end)
     end)
-
-    -- right column: cb/sl colors and overlay toggles
+    -- right col
     secHdr(R,"checkbox colors")
     colRow(R,"checked",T.cbOn,function(c) T.cbOn=c; refreshTheme() end)
     colRow(R,"unchecked",T.cbOff,function(c) T.cbOff=c; refreshTheme() end)
@@ -1142,83 +952,71 @@ local function buildOptions()
     secHdr(R,"effects")
     cbRow(R,"blur overlay",true,function(v) tw(blurFX,{Size=v and T.blurAmt or 0},0.3) end)
     cbRow(R,"dark overlay",true,function(v) tw(darkOverlay,{BackgroundTransparency=v and (1-T.overlayAlpha) or 1},0.3) end)
-    -- wire up applyTheme cube refresh (maps REG_COL entries to T keys)
-    local tkeys={"bg","navBg","border","accent","cbOn","cbOff","slTrack","slFill","slKnob"}
-    local startIdx=#REG_COL-8
-    for i,key in ipairs(tkeys) do
-        local ref=REG_COL[startIdx+i]
-        if ref then table.insert(_colToTKey,{key=key,ref=ref}) end
-    end
 end
 
--- ============================================================
+-- ═══════════════════════════════════════
 --   TAB: CONFIGS
--- ============================================================
+-- ═══════════════════════════════════════
 local CONFIG_PATH="lunatic_configs/"
-
 local function getConfigData()
     return {
         AB={Enabled=AB.Enabled,Mode=AB.Mode,VisCheck=AB.VisCheck,TeamCheck=AB.TeamCheck,FOVSize=AB.FOVSize,ShowFOV=AB.ShowFOV,FOVMouse=AB.FOVMouse,Smooth=AB.Smooth,StickyAim=AB.StickyAim,Prediction=AB.Prediction,PredX=AB.PredX,PredY=AB.PredY,DistLimit=AB.DistLimit},
-        SA={Enabled=SA.Enabled,FOVSize=SA.FOVSize,ShowFOV=SA.ShowFOV,TeamCheck=SA.TeamCheck,Tracer=SA.Tracer,Prediction=SA.Prediction,PredX=SA.PredX,PredY=SA.PredY,DistLimit=SA.DistLimit},
+        SA={Enabled=SA.Enabled,FOVSize=SA.FOVSize,ShowFOV=SA.ShowFOV,TeamCheck=SA.TeamCheck,FOVMouse=SA.FOVMouse,Tracer=SA.Tracer,Prediction=SA.Prediction,PredX=SA.PredX,PredY=SA.PredY,DistLimit=SA.DistLimit},
         TB={Enabled=TB.Enabled,Delay=TB.Delay,HitboxMult=TB.HitboxMult,TeamCheck=TB.TeamCheck,VisCheck=TB.VisCheck},
-        ESP={Enabled=ESP.Enabled,BoxMode=ESP.BoxMode,BoxEnabled=ESP.BoxEnabled,BoxFill=ESP.BoxFill,Names=ESP.Names,NameMode=ESP.NameMode,Health=ESP.Health,Distance=ESP.Distance,Tracer=ESP.Tracer,Skeleton=ESP.Skeleton,HeadDot=ESP.HeadDot,HeadDotFill=ESP.HeadDotFill,Weapon=ESP.Weapon,SelfESP=ESP.SelfESP,DistLimit=ESP.DistLimit},
-        Chams={Enabled=Chams.Enabled,ThroughWalls=Chams.ThroughWalls,Glow=Chams.Glow,FillTransp=Chams.FillTransp,OutTransp=Chams.OutTransp},
+        ESP={Enabled=ESP.Enabled,BoxMode=ESP.BoxMode,BoxEnabled=ESP.BoxEnabled,BoxFill=ESP.BoxFill,Names=ESP.Names,NameMode=ESP.NameMode,Health=ESP.Health,Distance=ESP.Distance,Tracer=ESP.Tracer,Skeleton=ESP.Skeleton,HeadDot=ESP.HeadDot,HeadDotFill=ESP.HeadDotFill,Weapon=ESP.Weapon,DistLimit=ESP.DistLimit},
+        Chams={Enabled=Chams.Enabled,ThroughWalls=Chams.ThroughWalls,FillTransp=Chams.FillTransp,OutTransp=Chams.OutTransp},
         WalkMod={Enabled=WalkMod.Enabled,Speed=WalkMod.Speed},
-        VS={Enabled=VS.Enabled,Speed=VS.Speed},
-        VFlight={Enabled=VFlight.Enabled,Speed=VFlight.Speed},
+        CFrameMove={Enabled=CFrameMove.Enabled,Speed=CFrameMove.Speed},
+        CFrameFly={Enabled=CFrameFly.Enabled,Speed=CFrameFly.Speed},
         SpinBot={Enabled=SpinBot.Enabled,Speed=SpinBot.Speed},
-        Misc={AntiAFK=MiscMov.AntiAFK,Noclip=MiscMov.Noclip,NoFallDmg=MiscMov.NoFallDmg,AntiTrip=MiscMov.AntiTrip},
         WorldFX={Saturation=WorldFX.Saturation,Brightness=WorldFX.Brightness,NoFog=WorldFX.NoFog,Fullbright=WorldFX.Fullbright,TimeOfDay=WorldFX.TimeOfDay,WeatherMode=WorldFX.WeatherMode},
     }
 end
-
 local function saveConfig(name)
     pcall(function()
         if not isfolder(CONFIG_PATH) then makefolder(CONFIG_PATH) end
         writefile(CONFIG_PATH..name..".json",HttpService:JSONEncode(getConfigData()))
     end)
 end
-
 local function listConfigs()
     local ok,files=pcall(listfiles,CONFIG_PATH)
     if not ok then return {} end
     local configs={}
     for _,f in ipairs(files) do
-        if f:sub(-5)==".json" then
-            local n=f:match("([^/\\]+)%.json$"); if n then table.insert(configs,n) end
-        end
+        if f:sub(-5)==".json" then local n=f:match("([^/\\]+)%.json$"); if n then table.insert(configs,n) end end
     end
     return configs
 end
-
 local function buildConfigs()
     local L,R=tabPages["configs"].L,tabPages["configs"].R
     secHdr(L,"save config")
-    local nameInp=ni("TextBox",{Text="",PlaceholderText="config name...",Font=Enum.Font.Gotham,TextSize=10,TextColor3=T.text,PlaceholderColor3=T.textDim,BackgroundColor3=T.inputBg,BorderSizePixel=0,Size=UDim2.new(1,0,0,24),TextXAlignment=Enum.TextXAlignment.Left,ClearTextOnFocus=false},L)
+    local nameInp=ni("TextBox",{Text="",PlaceholderText="config name...",Font=Enum.Font.Gotham,TextSize=10,TextColor3=T.text,PlaceholderColor3=T.textDim,BackgroundColor3=T.inputBg,BorderSizePixel=0,Size=UDim2.new(1,0,0,26),TextXAlignment=Enum.TextXAlignment.Left,ClearTextOnFocus=false},L)
     mkCorner(5,nameInp); mkStroke(T.border,1,nameInp); mkPad(6,0,0,0,nameInp)
-    local saveBtn=ni("TextButton",{Text="save",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.text,BackgroundColor3=T.accent,BorderSizePixel=0,Size=UDim2.new(1,0,0,24),AutoButtonColor=false},L)
+    local saveBtn=ni("TextButton",{Text="save config",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.text,BackgroundColor3=T.accent,BorderSizePixel=0,Size=UDim2.new(1,0,0,26),AutoButtonColor=false},L)
     mkCorner(5,saveBtn)
+    saveBtn.MouseEnter:Connect(function() tw(saveBtn,{BackgroundColor3=T.accentHover or T.accent},0.07) end)
+    saveBtn.MouseLeave:Connect(function() tw(saveBtn,{BackgroundColor3=T.accent},0.07) end)
     saveBtn.MouseButton1Click:Connect(function()
         local n=nameInp.Text; if n=="" then n="config_"..os.time() end
-        saveConfig(n); showNotif("config saved: "..n,Color3.fromRGB(80,220,120))
+        saveConfig(n); showNotif("saved: "..n,Color3.fromRGB(80,220,120))
     end)
     spacer(L,4)
     secHdr(L,"info")
-    ni("TextLabel",{Text="configs store all toggle states, slider values,\nesp settings and combat settings.\nfiles save to the lunatic_configs/ folder.",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,40),TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left},L)
+    ni("TextLabel",{Text="configs save all toggle states, slider values,\nesp settings and combat settings.\nfiles save to: lunatic_configs/",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,40),TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left},L)
 
     secHdr(R,"load config")
     local cfgList=ni("Frame",{Size=UDim2.new(1,0,0,0),BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y},R)
     ni("UIListLayout",{Padding=UDim.new(0,3)},cfgList)
-    local refreshBtn=ni("TextButton",{Text="↻  refresh",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.textDim,BackgroundColor3=T.cbOff,BorderSizePixel=0,Size=UDim2.new(1,0,0,22),AutoButtonColor=false},R)
+    local refreshBtn=ni("TextButton",{Text="↻  refresh list",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.textDim,BackgroundColor3=T.cbOff,BorderSizePixel=0,Size=UDim2.new(1,0,0,24),AutoButtonColor=false},R)
     mkCorner(5,refreshBtn)
     local function refreshCfgList()
         for _,ch in ipairs(cfgList:GetChildren()) do if not ch:IsA("UIListLayout") then ch:Destroy() end end
         local configs=listConfigs()
         if #configs==0 then
-            ni("TextLabel",{Text="no configs found",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,20)},cfgList); return
+            ni("TextLabel",{Text="no configs found",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,22)},cfgList); return
         end
         for _,name in ipairs(configs) do
-            local row=ni("Frame",{Size=UDim2.new(1,0,0,24),BackgroundTransparency=1},cfgList)
+            local row=ni("Frame",{Size=UDim2.new(1,0,0,26),BackgroundTransparency=1},cfgList)
             ni("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,3)},row)
             local lb=ni("TextButton",{Text=name,Font=Enum.Font.Gotham,TextSize=10,TextColor3=T.text,BackgroundColor3=T.cbOff,BorderSizePixel=0,Size=UDim2.new(1,-28,1,0),TextXAlignment=Enum.TextXAlignment.Left,AutoButtonColor=false},row)
             mkCorner(5,lb); mkPad(6,0,0,0,lb)
@@ -1228,14 +1026,15 @@ local function buildConfigs()
                 pcall(function()
                     local raw=readfile(CONFIG_PATH..name..".json")
                     local data=HttpService:JSONDecode(raw)
-                    if data.AB then for k,v in pairs(data.AB) do pcall(function() AB[k]=v end) end end
-                    if data.SA then for k,v in pairs(data.SA) do pcall(function() SA[k]=v end) end end
-                    if data.TB then for k,v in pairs(data.TB) do pcall(function() TB[k]=v end) end end
-                    if data.ESP then for k,v in pairs(data.ESP) do pcall(function() ESP[k]=v end) end end
-                    if data.Chams then for k,v in pairs(data.Chams) do pcall(function() Chams[k]=v end) end end
-                    if data.WalkMod then WalkMod.Enabled=data.WalkMod.Enabled; WalkMod.Speed=data.WalkMod.Speed end
-                    if data.VS then VS.Enabled=data.VS.Enabled; VS.Speed=data.VS.Speed end
-                    if data.VFlight then VFlight.Enabled=data.VFlight.Enabled; VFlight.Speed=data.VFlight.Speed end
+                    if data.AB        then for k,v in pairs(data.AB)        do pcall(function() AB[k]=v        end) end end
+                    if data.SA        then for k,v in pairs(data.SA)        do pcall(function() SA[k]=v        end) end end
+                    if data.TB        then for k,v in pairs(data.TB)        do pcall(function() TB[k]=v        end) end end
+                    if data.ESP       then for k,v in pairs(data.ESP)       do pcall(function() ESP[k]=v       end) end end
+                    if data.Chams     then for k,v in pairs(data.Chams)     do pcall(function() Chams[k]=v     end) end end
+                    if data.WalkMod   then WalkMod.Enabled=data.WalkMod.Enabled; WalkMod.Speed=data.WalkMod.Speed end
+                    if data.CFrameMove then CFrameMove.Enabled=data.CFrameMove.Enabled; CFrameMove.Speed=data.CFrameMove.Speed end
+                    if data.CFrameFly  then CFrameFly.Enabled=data.CFrameFly.Enabled;   CFrameFly.Speed=data.CFrameFly.Speed   end
+                    if data.SpinBot   then SpinBot.Enabled=data.SpinBot.Enabled; SpinBot.Speed=data.SpinBot.Speed end
                     showNotif("loaded: "..name,Color3.fromRGB(80,220,120))
                 end)
             end)
@@ -1250,28 +1049,27 @@ local function buildConfigs()
     refreshCfgList()
 end
 
--- ============================================================
---   BUILD EVERYTHING
--- ============================================================
+-- ═══════════════════════════════════════
+--   BUILD ALL TABS
+-- ═══════════════════════════════════════
 buildCombat()
 pcall(buildVisuals)
 buildMod()
 buildPlayers()
 buildOptions()
 buildConfigs()
-buildNavLayout()
+buildNavLayout()   -- must come AFTER all pages are built
 
--- ============================================================
---   POST-BUILD (resize grip, keybind widget, anti-afk, entry anim)
--- ============================================================
+-- ═══════════════════════════════════════
+--   POST-BUILD: resize grip + keybind widget + entry anim
+-- ═══════════════════════════════════════
 task.spawn(function()
 
--- resize grip bottom-right corner
+-- ─── resize grip ─────────────────────
 local resizeGrip=ni("TextButton",{Text="",BackgroundTransparency=1,Size=UDim2.new(0,22,0,22),Position=UDim2.new(1,-22,1,-22),BorderSizePixel=0,ZIndex=14,AutoButtonColor=false},MF)
--- small visual indicator triangle
-local resizeIcon=ni("TextLabel",{Text="⌟",Font=Enum.Font.GothamBold,TextSize=14,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),TextXAlignment=Enum.TextXAlignment.Right,TextYAlignment=Enum.TextYAlignment.Bottom,ZIndex=14},resizeGrip)
+ni("TextLabel",{Text="⌟",Font=Enum.Font.GothamBold,TextSize=14,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),TextXAlignment=Enum.TextXAlignment.Right,TextYAlignment=Enum.TextYAlignment.Bottom,ZIndex=14},resizeGrip)
 local _resizing=false
-resizeGrip.MouseButton1Down:Connect(function() _resizing=true; _g._drag=false end)
+resizeGrip.MouseButton1Down:Connect(function() _resizing=true end)
 UserInputService.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then _resizing=false end end)
 UserInputService.InputChanged:Connect(function(i)
     if _resizing and i.UserInputType==Enum.UserInputType.MouseMovement then
@@ -1280,14 +1078,12 @@ UserInputService.InputChanged:Connect(function(i)
     end
 end)
 
--- keybind widget (floating, draggable, shows active binds)
-local KBWGui=Instance.new("ScreenGui")
-KBWGui.Name="lunatic_kbwidget"; KBWGui.ResetOnSpawn=false
-KBWGui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling; KBWGui.DisplayOrder=998
+-- ─── keybind widget (floating) ───────
+local KBWGui=ni("ScreenGui",{Name="lunatic_kbw",ResetOnSpawn=false,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,DisplayOrder=998},nil)
 pcall(function() KBWGui.Parent=CoreGui end)
 if not KBWGui.Parent then KBWGui.Parent=PGui end
 
-local KBW=ni("Frame",{Size=UDim2.new(0,188,0,32),Position=UDim2.new(1,-210,0,52),BackgroundColor3=T.navBg,BackgroundTransparency=0.12,BorderSizePixel=0,ZIndex=3},KBWGui)
+local KBW=ni("Frame",{Size=UDim2.new(0,190,0,32),Position=UDim2.new(1,-212,0,52),BackgroundColor3=T.navBg,BackgroundTransparency=0.10,BorderSizePixel=0,ZIndex=3},KBWGui)
 mkCorner(9,KBW); mkStroke(T.border,1,KBW)
 ni("UIGradient",{Color=ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(26,10,50)),ColorSequenceKeypoint.new(1,Color3.fromRGB(7,5,15))},Rotation=140},KBW)
 ni("TextLabel",{Text="active binds",Font=Enum.Font.GothamBold,TextSize=9,TextColor3=T.brand,BackgroundTransparency=1,Size=UDim2.new(1,-4,0,20),Position=UDim2.new(0,8,0,2),ZIndex=4,TextXAlignment=Enum.TextXAlignment.Left},KBW)
@@ -1296,17 +1092,15 @@ local kbwList=ni("Frame",{Size=UDim2.new(1,0,1,-26),Position=UDim2.new(0,0,0,26)
 ni("UIListLayout",{Padding=UDim.new(0,1)},kbwList); mkPad(7,7,2,3,kbwList)
 
 local _wDrag=false; local _wOx,_wOy=0,0
-KBW.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then _wDrag=true; _wOx=i.Position.X-KBW.AbsolutePosition.X; _wOy=i.Position.Y-KBW.AbsolutePosition.Y end end)
+KBW.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then _wDrag=true;_wOx=i.Position.X-KBW.AbsolutePosition.X;_wOy=i.Position.Y-KBW.AbsolutePosition.Y end end)
 KBW.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then _wDrag=false end end)
 UserInputService.InputChanged:Connect(function(i)
-    if _wDrag and i.UserInputType==Enum.UserInputType.MouseMovement then
-        KBW.Position=UDim2.new(0,i.Position.X-_wOx,0,i.Position.Y-_wOy)
-    end
+    if _wDrag and i.UserInputType==Enum.UserInputType.MouseMovement then KBW.Position=UDim2.new(0,i.Position.X-_wOx,0,i.Position.Y-_wOy) end
 end)
 
--- poll active keybinds every 0.1s and rebuild the list
+-- poll active binds every 0.1s
 task.spawn(function()
-    while true do
+    while KBW.Parent do
         task.wait(0.1)
         for _,ch in ipairs(kbwList:GetChildren()) do
             if not ch:IsA("UIListLayout") and not ch:IsA("UIPadding") then ch:Destroy() end
@@ -1316,11 +1110,10 @@ task.spawn(function()
             if e.name=="Toggle UI" then continue end
             local active=(e.mode=="Always") or ((e.mode=="Toggle" or e.mode=="Hold") and e.state)
             if not active then continue end
-            local mLabel=e.mode=="Always" and "always" or e.mode:lower()
             local row=ni("Frame",{Size=UDim2.new(1,0,0,15),BackgroundTransparency=1,ZIndex=5},kbwList)
             local dot=ni("Frame",{Size=UDim2.new(0,5,0,5),Position=UDim2.new(0,0,0.5,-2),BackgroundColor3=T.accent,BorderSizePixel=0,ZIndex=6},row); mkCorner(3,dot)
-            ni("TextLabel",{Text=e.name,Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(0.62,0,1,0),Position=UDim2.new(0,9,0,0),TextXAlignment=Enum.TextXAlignment.Left,ZIndex=6},row)
-            ni("TextLabel",{Text=mLabel,Font=Enum.Font.GothamBold,TextSize=8,TextColor3=T.tabIdle,BackgroundTransparency=1,Size=UDim2.new(0.38,0,1,0),Position=UDim2.new(0.62,0,0,0),TextXAlignment=Enum.TextXAlignment.Right,ZIndex=6},row)
+            ni("TextLabel",{Text=e.name,Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(0.64,0,1,0),Position=UDim2.new(0,9,0,0),TextXAlignment=Enum.TextXAlignment.Left,ZIndex=6},row)
+            ni("TextLabel",{Text=e.mode:lower(),Font=Enum.Font.GothamBold,TextSize=8,TextColor3=T.tabIdle,BackgroundTransparency=1,Size=UDim2.new(0.36,0,1,0),Position=UDim2.new(0.64,0,0,0),TextXAlignment=Enum.TextXAlignment.Right,ZIndex=6},row)
             count=count+1
         end
         if count==0 then
@@ -1328,11 +1121,11 @@ task.spawn(function()
             ni("TextLabel",{Text="nothing active",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),Position=UDim2.new(0,4,0,0),TextXAlignment=Enum.TextXAlignment.Left,ZIndex=6},row)
             count=1
         end
-        KBW.Size=UDim2.new(0,188,0,28+count*16)
+        KBW.Size=UDim2.new(0,190,0,28+count*16)
     end
 end)
 
--- anti-afk loop — sends a spacebar tap every ~55 seconds
+-- ─── anti-afk loop ───────────────────
 task.spawn(function()
     while true do
         task.wait(55)
@@ -1344,13 +1137,15 @@ task.spawn(function()
     end
 end)
 
--- entry animation — slides in from slightly below center
-MF.BackgroundTransparency=0
-MF.Size=UDim2.new(0,WIN_W,0,WIN_H-50)
-MF.Position=UDim2.new(0.5,-WIN_W/2,0.5,-(WIN_H-50)/2+30)
-tw(MF,{BackgroundTransparency=0,Size=UDim2.new(0,WIN_W,0,WIN_H),Position=UDim2.new(0.5,-WIN_W/2,0.5,-WIN_H/2)},0.45,Enum.EasingStyle.Back)
-tw(blurFX,{Size=T.blurAmt},0.45)
-tw(darkOverlay,{BackgroundTransparency=1-T.overlayAlpha},0.45)
-task.delay(0.12,function() UserInputService.MouseIconEnabled=false; dotCursor.Visible=true end)
+-- ─── entry animation ─────────────────
+MF.Size=UDim2.new(0,WIN_W,0,WIN_H-60)
+MF.Position=UDim2.new(0.5,-WIN_W/2,0.5,-(WIN_H-60)/2+28)
+MF.BackgroundTransparency=0.3
+tw(MF,{BackgroundTransparency=0,Size=UDim2.new(0,WIN_W,0,WIN_H),Position=UDim2.new(0.5,-WIN_W/2,0.5,-WIN_H/2)},0.48,Enum.EasingStyle.Back)
+tw(blurFX,{Size=T.blurAmt},0.48)
+tw(darkOverlay,{BackgroundTransparency=1-T.overlayAlpha},0.48)
+task.delay(0.14,function()
+    UserInputService.MouseIconEnabled=false; dotCursor.Visible=true
+end)
 
-end) 
+end) -- end task.spawn
