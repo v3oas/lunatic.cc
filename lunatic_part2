@@ -39,7 +39,7 @@ local _skyboxIds               = _g._skyboxIds or {}
 local applyLocalESP            = _g.applyLocalESP
 local clipInner,uiToggleKB     = _g.clipInner,_g.uiToggleKB
 uiToggleKB = uiToggleKB or {key=Enum.KeyCode.RightShift,mode="Toggle",state=false,callbacks={}}
-
+clipInner = MF:FindFirstChild("Main") or clipInner
 -- active tab tracker lives here so nav rebuilds work properly
 local _ACTIVE_TAB=nil
 
@@ -104,6 +104,7 @@ local tabPages={}
 local navTabBtns={}
 local navTabInds={}
 
+if not ContentArea then return end
 local function selTab(name)
     if _ACTIVE_TAB==name then return end
     if _ACTIVE_TAB then
