@@ -513,27 +513,31 @@ pcall(function()
     if not hookmetamethod then return end
     local oldNC
     oldNC=hookmetamethod(game,"__namecall",newcclosure(function(self,...)
-        local method=getnamecallmethod()
+        if not SA.Enabled then return oldNC(self,...) end
 
-        if SA.Enabled then
-            -- ── workspace:Raycast ──────────────────────────────────────────
-            if method=="Raycast" and (self==workspace or pcall(function() return self:IsA("WorldRoot") end) and self:IsA("WorldRoot")) then
-                local args={...}
-                local origin=args[1]; local dir=args[2]; local params=args[3]
-                if typeof(origin)=="Vector3" and typeof(dir)=="Vector3" then
-                    local rayLen=dir.Magnitude
-                    if rayLen>50 then  -- skip short camera-collision rays
-                        local tPos=_saGetPos()
-                        if tPos then
-                            local newDir=(tPos-origin).Unit*rayLen
-                            if params then return oldNC(self,origin,newDir,params)
-                            else return oldNC(self,origin,newDir) end
-                        end
-                    end
+        local ok,method=pcall(getnamecallmethod)
+        if not ok then return oldNC(self,...) end
+
+        -- ── workspace:Raycast — only fires when self is literally workspace ──
+        if method=="Raycast" and self==workspace then
+            local args={...}
+            local origin=args[1]; local dir=args[2]
+            if typeof(origin)=="Vector3" and typeof(dir)=="Vector3" and dir.Magnitude>50 then
+                local tPos=_saGetPos()
+                if tPos then
+                    local newDir=(tPos-origin).Unit*dir.Magnitude
+                    local params=args[3]
+                    if params then return oldNC(self,origin,newDir,params)
+                    else return oldNC(self,origin,newDir) end
                 end
+            end
+            return oldNC(self,...)
+        end
 
-            -- ── RemoteEvent:FireServer / InvokeServer ──────────────────────
-            elseif (method=="FireServer" or method=="InvokeServer") and typeof(self)=="Instance" and self:IsA("RemoteEvent") or (typeof(self)=="Instance" and self:IsA("RemoteFunction") and method=="InvokeServer") then
+        -- ── RemoteEvent:FireServer only ──────────────────────────────────────
+        if method=="FireServer" then
+            local ok2,isRE=pcall(function() return self:IsA("RemoteEvent") end)
+            if ok2 and isRE then
                 local tPos=_saGetPos()
                 if tPos then
                     local args={...}; local camPos=Cam.CFrame.Position; local replaced=false
@@ -541,8 +545,6 @@ pcall(function()
                         if not replaced then
                             if typeof(v)=="Vector3" then
                                 local mag=v.Magnitude
-                                -- unit vectors (direction) have magnitude ≈ 1
-                                -- world positions have magnitude >> 1 (usually 100+ from origin)
                                 if mag>0.5 and mag<2 then
                                     args[i]=(tPos-camPos).Unit; replaced=true
                                 end
@@ -1115,7 +1117,8 @@ local function setUIVisible(v)
     uiVisible=v; MF.Visible=v
     UserInputService.MouseIconEnabled=not v
     dotCursor.Visible=v
-    pcall(function() UserInputService.MouseBehavior=v and Enum.MouseBehavior.Default or Enum.MouseBehavior.LockCenter end)
+    -- always release mouse to Default — never lock it from the UI side
+    pcall(function() UserInputService.MouseBehavior=Enum.MouseBehavior.Default end)
     tw(blurFX,{Size=v and T.blurAmt or 0},0.3)
     tw(darkOverlay,{BackgroundTransparency=v and (1-T.overlayAlpha) or 1},0.3)
 end
