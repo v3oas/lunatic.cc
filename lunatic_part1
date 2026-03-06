@@ -537,36 +537,118 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- ═══════════════════════════════════════
---   SILENT AIM — FindPartOnRayWithIgnoreList
---   Only redirects long-range rays (weapon shots).
---   Camera collision rays are very short (<50 studs) — those are skipped
---   so the camera never moves visually.
+--   SILENT AIM — __namecall dual hook
+--
+--   Arsenal/Rivals use workspace:Raycast() (new API) for hit detection.
+--   We intercept __namecall and handle two cases:
+--
+--   1. workspace:Raycast(origin, direction, params)
+--      → redirect direction toward target for rays longer than 50 studs
+--        (short rays = camera collision, skip those)
+--
+--   2. RemoteEvent:FireServer(...) / InvokeServer(...)
+--      → replace unit-vector direction arguments (magnitude ≈ 1)
+--        so the server registers a hit on the target
+--
+--   Also keep FindPartOnRayWithIgnoreList as a third fallback
+--   for older games that still use the legacy API.
 -- ═══════════════════════════════════════
 local _saTarget=nil
+
+local function _saGetPos()
+    if not (_saTarget and _saTarget.Parent) then return nil end
+    local pos=_saTarget.Position
+    if SA.Prediction then
+        local root=_saTarget.Parent:FindFirstChild("HumanoidRootPart")
+        if root then
+            local v=root.AssemblyLinearVelocity
+            pos=pos+Vector3.new(v.X*SA.PredX*0.05,v.Y*SA.PredY*0.05,v.Z*SA.PredX*0.05)
+        end
+    end
+    return pos
+end
+
+-- PRIMARY: __namecall hook — workspace:Raycast + RemoteEvent:FireServer
 pcall(function()
-    if not hookfunction then return end
-    local orig=hookfunction(workspace.FindPartOnRayWithIgnoreList,
-        newcclosure(function(ws,ray,ignoreList,...)
-            if SA.Enabled and _saTarget and _saTarget.Parent then
-                -- camera collision rays are short (<50 studs) — skip them entirely
-                -- weapon/bullet rays are typically 500-2000 studs
-                local rayLen=ray.Direction.Magnitude
-                if rayLen < 50 then
-                    return orig(ws,ray,ignoreList,...)
-                end
-                local targetPos=_saTarget.Position
-                if SA.Prediction then
-                    local root=_saTarget.Parent:FindFirstChild("HumanoidRootPart")
-                    if root then
-                        local vel=root.AssemblyLinearVelocity
-                        targetPos=targetPos+Vector3.new(vel.X*SA.PredX*0.05,vel.Y*SA.PredY*0.05,vel.Z*SA.PredX*0.05)
+    if not hookmetamethod then return end
+    local oldNC
+    oldNC=hookmetamethod(game,"__namecall",newcclosure(function(self,...)
+        local method=getnamecallmethod()
+
+        if SA.Enabled then
+            -- ── workspace:Raycast ──────────────────────────────────────────
+            if method=="Raycast" and (self==workspace or pcall(function() return self:IsA("WorldRoot") end) and self:IsA("WorldRoot")) then
+                local args={...}
+                local origin=args[1]; local dir=args[2]; local params=args[3]
+                if typeof(origin)=="Vector3" and typeof(dir)=="Vector3" then
+                    local rayLen=dir.Magnitude
+                    if rayLen>50 then  -- skip short camera-collision rays
+                        local tPos=_saGetPos()
+                        if tPos then
+                            local newDir=(tPos-origin).Unit*rayLen
+                            if params then return oldNC(self,origin,newDir,params)
+                            else return oldNC(self,origin,newDir) end
+                        end
                     end
                 end
-                local dir=(targetPos-ray.Origin).Unit*rayLen
-                return orig(ws,Ray.new(ray.Origin,dir),ignoreList,...)
+
+            -- ── RemoteEvent:FireServer / InvokeServer ──────────────────────
+            elseif (method=="FireServer" or method=="InvokeServer") and typeof(self)=="Instance" and self:IsA("RemoteEvent") or (typeof(self)=="Instance" and self:IsA("RemoteFunction") and method=="InvokeServer") then
+                local tPos=_saGetPos()
+                if tPos then
+                    local args={...}; local camPos=Cam.CFrame.Position; local replaced=false
+                    for i,v in ipairs(args) do
+                        if not replaced then
+                            if typeof(v)=="Vector3" then
+                                local mag=v.Magnitude
+                                -- unit vectors (direction) have magnitude ≈ 1
+                                -- world positions have magnitude >> 1 (usually 100+ from origin)
+                                if mag>0.5 and mag<2 then
+                                    args[i]=(tPos-camPos).Unit; replaced=true
+                                end
+                            elseif typeof(v)=="CFrame" then
+                                args[i]=CFrame.new(v.Position,tPos); replaced=true
+                            end
+                        end
+                    end
+                    if replaced then return oldNC(self,table.unpack(args)) end
+                end
             end
-            return orig(ws,ray,ignoreList,...)
-        end))
+        end
+
+        return oldNC(self,...)
+    end))
+end)
+
+-- SECONDARY: hookfunction workspace.Raycast (some executors expose this directly)
+pcall(function()
+    if not hookfunction or not workspace.Raycast then return end
+    local origR=hookfunction(workspace.Raycast,newcclosure(function(ws,origin,dir,params,...)
+        if SA.Enabled and typeof(dir)=="Vector3" and dir.Magnitude>50 then
+            local tPos=_saGetPos()
+            if tPos then
+                local newDir=(tPos-origin).Unit*dir.Magnitude
+                if params then return origR(ws,origin,newDir,params,...)
+                else return origR(ws,origin,newDir,...) end
+            end
+        end
+        return origR(ws,origin,dir,params,...)
+    end))
+end)
+
+-- TERTIARY: legacy FindPartOnRayWithIgnoreList (older game codebases)
+pcall(function()
+    if not hookfunction or not workspace.FindPartOnRayWithIgnoreList then return end
+    local origL=hookfunction(workspace.FindPartOnRayWithIgnoreList,newcclosure(function(ws,ray,ignoreList,...)
+        if SA.Enabled and ray.Direction.Magnitude>50 then
+            local tPos=_saGetPos()
+            if tPos then
+                local dir=(tPos-ray.Origin).Unit*ray.Direction.Magnitude
+                return origL(ws,Ray.new(ray.Origin,dir),ignoreList,...)
+            end
+        end
+        return origL(ws,ray,ignoreList,...)
+    end))
 end)
 
 -- ═══════════════════════════════════════
