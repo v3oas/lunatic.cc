@@ -58,6 +58,11 @@ mkStroke = mkStroke or function(col,thick,p) return ni("UIStroke",{Color=col,Thi
 mkPad    = mkPad    or function(l,r,t,b,p) return ni("UIPadding",{PaddingLeft=UDim.new(0,l or 0),PaddingRight=UDim.new(0,r or 0),PaddingTop=UDim.new(0,t or 0),PaddingBottom=UDim.new(0,b or 0)},p) end
 spacer   = spacer   or function(p,h) ni("Frame",{Size=UDim2.new(1,0,0,h or 4),BackgroundTransparency=1},p) end
 
+-- T fallback — if part1 hasn't run, define a minimal theme so mkPage doesn't crash on T.scrollbar etc.
+if not T then
+    T={bg=Color3.fromRGB(11,10,16),panel=Color3.fromRGB(16,14,22),navBg=Color3.fromRGB(8,7,13),border=Color3.fromRGB(52,32,88),sep=Color3.fromRGB(28,18,46),inputBg=Color3.fromRGB(14,12,22),scrollbar=Color3.fromRGB(80,50,148),tabActive=Color3.fromRGB(218,196,255),tabIdle=Color3.fromRGB(80,60,112),tabHover=Color3.fromRGB(148,118,200),tabInd=Color3.fromRGB(130,78,222),brand=Color3.fromRGB(118,72,210),text=Color3.fromRGB(192,178,218),textDim=Color3.fromRGB(84,70,114),secHdr=Color3.fromRGB(122,82,198),accent=Color3.fromRGB(120,72,220),accentDim=Color3.fromRGB(58,32,112),accentHover=Color3.fromRGB(160,110,248),cbOn=Color3.fromRGB(120,72,220),cbOff=Color3.fromRGB(18,15,28),cbBorder=Color3.fromRGB(52,32,88),cbMark=Color3.fromRGB(255,255,255),slTrack=Color3.fromRGB(18,15,28),slFill=Color3.fromRGB(120,72,220),slKnob=Color3.fromRGB(212,192,252),dropBg=Color3.fromRGB(14,12,22),dropHover=Color3.fromRGB(58,32,112),navMode="left",overlayAlpha=0.55,blurAmt=8,radius=8}
+end
+
 -- ═══════════════════════════════════════
 --   LIVE WIDGET REGISTRIES
 -- ═══════════════════════════════════════
