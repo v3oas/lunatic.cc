@@ -481,17 +481,8 @@ end)
 --
 --   Arsenal/Rivals use workspace:Raycast() (new API) for hit detection.
 --   We intercept __namecall and handle two cases:
---
---   1. workspace:Raycast(origin, direction, params)
---      → redirect direction toward target for rays longer than 50 studs
---        (short rays = camera collision, skip those)
---
---   2. RemoteEvent:FireServer(...) / InvokeServer(...)
---      → replace unit-vector direction arguments (magnitude ≈ 1)
---        so the server registers a hit on the target
---
---   Also keep FindPartOnRayWithIgnoreList as a third fallback
---   for older games that still use the legacy API.
+-- ═══════════════════════════════════════
+--   SILENT AIM
 -- ═══════════════════════════════════════
 local _saTarget=nil
 
@@ -508,88 +499,30 @@ local function _saGetPos()
     return pos
 end
 
--- PRIMARY: __namecall hook — workspace:Raycast + RemoteEvent:FireServer
 pcall(function()
-    if not hookmetamethod then return end
-    local oldNC
-    oldNC=hookmetamethod(game,"__namecall",newcclosure(function(self,...)
-        if not SA.Enabled then return oldNC(self,...) end
-
-        local ok,method=pcall(getnamecallmethod)
-        if not ok then return oldNC(self,...) end
-
-        -- ── workspace:Raycast — only fires when self is literally workspace ──
-        if method=="Raycast" and self==workspace then
-            local args={...}
-            local origin=args[1]; local dir=args[2]
-            if typeof(origin)=="Vector3" and typeof(dir)=="Vector3" and dir.Magnitude>50 then
-                local tPos=_saGetPos()
-                if tPos then
-                    local newDir=(tPos-origin).Unit*dir.Magnitude
-                    local params=args[3]
-                    if params then return oldNC(self,origin,newDir,params)
-                    else return oldNC(self,origin,newDir) end
-                end
-            end
-            return oldNC(self,...)
-        end
-
-        -- ── RemoteEvent:FireServer only ──────────────────────────────────────
-        if method=="FireServer" then
-            local ok2,isRE=pcall(function() return self:IsA("RemoteEvent") end)
-            if ok2 and isRE then
-                local tPos=_saGetPos()
-                if tPos then
-                    local args={...}; local camPos=Cam.CFrame.Position; local replaced=false
-                    for i,v in ipairs(args) do
-                        if not replaced then
-                            if typeof(v)=="Vector3" then
-                                local mag=v.Magnitude
-                                if mag>0.5 and mag<2 then
-                                    args[i]=(tPos-camPos).Unit; replaced=true
-                                end
-                            elseif typeof(v)=="CFrame" then
-                                args[i]=CFrame.new(v.Position,tPos); replaced=true
-                            end
-                        end
-                    end
-                    if replaced then return oldNC(self,table.unpack(args)) end
-                end
-            end
-        end
-
-        return oldNC(self,...)
-    end))
-end)
-
--- SECONDARY: hookfunction workspace.Raycast (some executors expose this directly)
-pcall(function()
-    if not hookfunction or not workspace.Raycast then return end
-    local origR=hookfunction(workspace.Raycast,newcclosure(function(ws,origin,dir,params,...)
-        if SA.Enabled and typeof(dir)=="Vector3" and dir.Magnitude>50 then
+    if not hookfunction then return end
+    local origRaycast=hookfunction(workspace.Raycast,newcclosure(function(ws,origin,dir,params,...)
+        if SA.Enabled and typeof(origin)=="Vector3" and typeof(dir)=="Vector3" and dir.Magnitude>50 then
             local tPos=_saGetPos()
             if tPos then
                 local newDir=(tPos-origin).Unit*dir.Magnitude
-                if params then return origR(ws,origin,newDir,params,...)
-                else return origR(ws,origin,newDir,...) end
+                return params and origRaycast(ws,origin,newDir,params,...) or origRaycast(ws,origin,newDir,...)
             end
         end
-        return origR(ws,origin,dir,params,...)
+        return params and origRaycast(ws,origin,dir,params,...) or origRaycast(ws,origin,dir,...)
     end))
 end)
 
--- TERTIARY: legacy FindPartOnRayWithIgnoreList (older game codebases)
 pcall(function()
-    if not hookfunction or not workspace.FindPartOnRayWithIgnoreList then return end
-    local origL=hookfunction(workspace.FindPartOnRayWithIgnoreList,newcclosure(function(ws,ray,ignoreList,...)
+    if not hookfunction then return end
+    local origFPOR=hookfunction(workspace.FindPartOnRayWithIgnoreList,newcclosure(function(ws,ray,ignore,...)
         if SA.Enabled and ray.Direction.Magnitude>50 then
             local tPos=_saGetPos()
             if tPos then
-                local dir=(tPos-ray.Origin).Unit*ray.Direction.Magnitude
-                return origL(ws,Ray.new(ray.Origin,dir),ignoreList,...)
+                return origFPOR(ws,Ray.new(ray.Origin,(tPos-ray.Origin).Unit*ray.Direction.Magnitude),ignore,...)
             end
         end
-        return origL(ws,ray,ignoreList,...)
+        return origFPOR(ws,ray,ignore,...)
     end))
 end)
 
