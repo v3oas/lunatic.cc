@@ -130,17 +130,17 @@ local function buildNavLayout()
     for k in pairs(REG_TABBTNS) do REG_TABBTNS[k]=nil end
     for k in pairs(REG_TABINDS) do REG_TABINDS[k]=nil end
 
-    local mode   = T.navMode or "left"
+    local mode   = T.navMode or "top"
     local isSide = (mode=="left" or mode=="right")
-    local NAV_H  = isSide and 0 or 36   -- horizontal navbar height
-    local nbSz,nbPos,caSz,caPos
+    local NAV_H  = 30
 
+    local nbSz,nbPos,caSz,caPos
     if mode=="top" then
-        nbSz=UDim2.new(1,0,0,NAV_H);    nbPos=UDim2.new(0,0,0,0)
-        caSz=UDim2.new(1,0,1,-NAV_H);   caPos=UDim2.new(0,0,0,NAV_H)
+        nbSz=UDim2.new(1,0,0,NAV_H); nbPos=UDim2.new(0,0,0,0)
+        caSz=UDim2.new(1,0,1,-NAV_H); caPos=UDim2.new(0,0,0,NAV_H)
     elseif mode=="bottom" then
-        nbSz=UDim2.new(1,0,0,NAV_H);    nbPos=UDim2.new(0,0,1,-NAV_H)
-        caSz=UDim2.new(1,0,1,-NAV_H);   caPos=UDim2.new(0,0,0,0)
+        nbSz=UDim2.new(1,0,0,NAV_H); nbPos=UDim2.new(0,0,1,-NAV_H)
+        caSz=UDim2.new(1,0,1,-NAV_H); caPos=UDim2.new(0,0,0,0)
     elseif mode=="left" then
         nbSz=UDim2.new(0,NAV_SIDE_W,1,0); nbPos=UDim2.new(0,0,0,0)
         caSz=UDim2.new(1,-NAV_SIDE_W,1,0); caPos=UDim2.new(0,NAV_SIDE_W,0,0)
@@ -151,63 +151,66 @@ local function buildNavLayout()
 
     NavBar=ni("Frame",{Size=nbSz,Position=nbPos,BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5,ClipsDescendants=true},MF)
     mkCorner(T.radius,NavBar)
-    -- fill the inner flat edge (prevents corner bleed into content)
-    if     mode=="left"   then ni("Frame",{Size=UDim2.new(0.5,0,1,0),Position=UDim2.new(0.5,0,0,0),BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5},NavBar)
-    elseif mode=="right"  then ni("Frame",{Size=UDim2.new(0.5,0,1,0),Position=UDim2.new(0,0,0,0),  BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5},NavBar)
-    elseif mode=="top"    then ni("Frame",{Size=UDim2.new(1,0,0.5,0),Position=UDim2.new(0,0,0.5,0),BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5},NavBar)
-    else                       ni("Frame",{Size=UDim2.new(1,0,0.5,0),Position=UDim2.new(0,0,0,0),  BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5},NavBar) end
-    -- separator
+    if mode=="left" then
+        ni("Frame",{Size=UDim2.new(0.5,0,1,0),Position=UDim2.new(0.5,0,0,0),BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5},NavBar)
+    elseif mode=="right" then
+        ni("Frame",{Size=UDim2.new(0.5,0,1,0),Position=UDim2.new(0,0,0,0),BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5},NavBar)
+    else
+        local fp=mode=="top" and UDim2.new(0,0,0.5,0) or UDim2.new(0,0,0,0)
+        ni("Frame",{Size=UDim2.new(1,0,0.5,0),Position=fp,BackgroundColor3=T.navBg,BorderSizePixel=0,ZIndex=5},NavBar)
+    end
     if isSide then
         ni("Frame",{Size=UDim2.new(0,1,1,0),Position=mode=="left" and UDim2.new(1,-1,0,0) or UDim2.new(0,0,0,0),BackgroundColor3=T.sep,BorderSizePixel=0,ZIndex=6},NavBar)
     else
         ni("Frame",{Size=UDim2.new(1,0,0,1),Position=mode=="top" and UDim2.new(0,0,1,-1) or UDim2.new(0,0,0,0),BackgroundColor3=T.sep,BorderSizePixel=0,ZIndex=6},NavBar)
     end
 
-    -- NO macOS buttons — just a small close [x] text button top-right corner
-    local closeBtn=ni("TextButton",{Text="×",Font=Enum.Font.GothamBold,TextSize=14,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(0,20,0,20),Position=UDim2.new(1,-22,0,2),ZIndex=10,AutoButtonColor=false,BorderSizePixel=0},NavBar)
-    closeBtn.MouseEnter:Connect(function() tw(closeBtn,{TextColor3=Color3.fromRGB(220,80,80)},0.07) end)
-    closeBtn.MouseLeave:Connect(function() tw(closeBtn,{TextColor3=T.textDim},0.07) end)
+    local closeBtn=ni("TextButton",{
+        Text="×",Font=Enum.Font.GothamBold,TextSize=15,TextColor3=T.textDim,
+        BackgroundTransparency=1,Size=UDim2.new(0,24,1,0),Position=UDim2.new(1,-24,0,0),
+        ZIndex=10,AutoButtonColor=false,BorderSizePixel=0,
+    },NavBar)
+    closeBtn.MouseEnter:Connect(function() tw(closeBtn,{TextColor3=Color3.fromRGB(210,60,60)},0.06) end)
+    closeBtn.MouseLeave:Connect(function() tw(closeBtn,{TextColor3=T.textDim},0.06) end)
     closeBtn.MouseButton1Click:Connect(function()
-        tw(MF,{BackgroundTransparency=1},0.15); task.delay(0.18,function() pcall(function() SGui:Destroy() end) end)
+        tw(MF,{BackgroundTransparency=1},0.12)
+        task.delay(0.15,function() pcall(function() SGui:Destroy() end) end)
     end)
 
-    -- content area (must exist before tab buttons reference it)
     ContentArea=ni("Frame",{Size=caSz,Position=caPos,BackgroundTransparency=1,ClipsDescendants=true,ZIndex=3},MF)
     for _,name in ipairs(tabDefs) do
         if tabPages[name] then tabPages[name].pg.Parent=ContentArea end
     end
 
     if isSide then
-        -- ── SIDE NAV ─────────────────────────────────────────────────────
-        local brandLbl=ni("TextLabel",{Text="lunatic.cc",Font=Enum.Font.GothamBold,TextSize=11,TextColor3=T.brand,BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(1,-8,0,16),Position=UDim2.new(0,8,0,30)},NavBar)
+        local brandLbl=ni("TextLabel",{Text="lunatic.cc",Font=Enum.Font.GothamBold,TextSize=11,TextColor3=T.brand,BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(1,-8,0,14),Position=UDim2.new(0,10,0,12)},NavBar)
         table.insert(REG_TEXT,{lbl=brandLbl,role="brand"})
-        local verLbl=ni("TextLabel",{Text="v7.0",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(1,-8,0,10),Position=UDim2.new(0,8,0,48)},NavBar)
+        local verLbl=ni("TextLabel",{Text="v7.0",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(1,-8,0,10),Position=UDim2.new(0,10,0,28)},NavBar)
         table.insert(REG_TEXT,{lbl=verLbl,role="dim"})
-        local tabCont=ni("Frame",{BackgroundTransparency=1,ZIndex=6,Size=UDim2.new(1,0,1,-62),Position=UDim2.new(0,0,0,62)},NavBar)
-        ni("UIListLayout",{Padding=UDim.new(0,2),FillDirection=Enum.FillDirection.Vertical,HorizontalAlignment=Enum.HorizontalAlignment.Left},tabCont)
-        mkPad(5,5,0,0,tabCont)
+        local tabCont=ni("Frame",{BackgroundTransparency=1,ZIndex=6,Size=UDim2.new(1,0,1,-44),Position=UDim2.new(0,0,0,44)},NavBar)
+        ni("UIListLayout",{Padding=UDim.new(0,0),FillDirection=Enum.FillDirection.Vertical,HorizontalAlignment=Enum.HorizontalAlignment.Left},tabCont)
         for _,name in ipairs(tabDefs) do
-            local btn=ni("TextButton",{Text=name,Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.tabIdle,BackgroundTransparency=1,Size=UDim2.new(1,0,0,30),BorderSizePixel=0,ZIndex=7,AutoButtonColor=false,TextXAlignment=Enum.TextXAlignment.Left},tabCont)
-            mkPad(14,6,0,0,btn)
-            local ind=ni("Frame",{Size=UDim2.new(0,2,1,0),Position=UDim2.new(1,-2,0,0),BackgroundColor3=T.tabInd,BackgroundTransparency=1,BorderSizePixel=0,ZIndex=8},btn)
+            local btn=ni("TextButton",{Text=name,Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.tabIdle,BackgroundTransparency=1,Size=UDim2.new(1,0,0,28),BorderSizePixel=0,ZIndex=7,AutoButtonColor=false,TextXAlignment=Enum.TextXAlignment.Left},tabCont)
+            mkPad(12,6,0,0,btn)
+            local ind=ni("Frame",{Size=UDim2.new(0,2,0.7,0),Position=UDim2.new(1,-2,0.15,0),BackgroundColor3=T.tabInd,BackgroundTransparency=1,BorderSizePixel=0,ZIndex=8},btn)
             navTabBtns[name]=btn; navTabInds[name]=ind; REG_TABBTNS[name]=btn; REG_TABINDS[name]=ind
-            btn.MouseEnter:Connect(function() if _ACTIVE_TAB~=name then tw(btn,{TextColor3=T.tabHover},0.08) end end)
-            btn.MouseLeave:Connect(function() if _ACTIVE_TAB~=name then tw(btn,{TextColor3=T.tabIdle},0.08) end end)
+            btn.MouseEnter:Connect(function() if _ACTIVE_TAB~=name then tw(btn,{TextColor3=T.tabHover},0.07) end end)
+            btn.MouseLeave:Connect(function() if _ACTIVE_TAB~=name then tw(btn,{TextColor3=T.tabIdle},0.07) end end)
             btn.MouseButton1Click:Connect(function() selTab(name) end)
         end
     else
-        -- ── HORIZONTAL NAV (top / bottom) ────────────────────────────────
-        local brandLbl=ni("TextLabel",{Text="lunatic",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.brand,BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(0,50,1,0),Position=UDim2.new(0,52,0,0)},NavBar)
+        local brandLbl=ni("TextLabel",{Text="lunatic.cc",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.brand,BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(0,70,1,0),Position=UDim2.new(0,8,0,0)},NavBar)
         table.insert(REG_TEXT,{lbl=brandLbl,role="brand"})
-        local tabCont=ni("Frame",{BackgroundTransparency=1,ZIndex=6,Size=UDim2.new(1,-106,1,0),Position=UDim2.new(0,106,0,0)},NavBar)
-        ni("UIListLayout",{Padding=UDim.new(0,0),FillDirection=Enum.FillDirection.Horizontal,VerticalAlignment=Enum.VerticalAlignment.Center},tabCont)
-        local indPos = mode=="top" and UDim2.new(0,0,1,-2) or UDim2.new(0,0,0,0)
+        ni("Frame",{Size=UDim2.new(0,1,0.55,0),Position=UDim2.new(0,80,0.225,0),BackgroundColor3=T.sep,BorderSizePixel=0,ZIndex=7},NavBar)
+        local tabCont=ni("Frame",{BackgroundTransparency=1,ZIndex=6,Size=UDim2.new(1,-106,1,0),Position=UDim2.new(0,84,0,0)},NavBar)
+        ni("UIListLayout",{Padding=UDim.new(0,0),FillDirection=Enum.FillDirection.Horizontal,VerticalAlignment=Enum.VerticalAlignment.Center,HorizontalAlignment=Enum.HorizontalAlignment.Left},tabCont)
+        local indPos=mode=="top" and UDim2.new(0,0,1,-2) or UDim2.new(0,0,0,0)
         for _,name in ipairs(tabDefs) do
-            local btn=ni("TextButton",{Text=name,Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.tabIdle,BackgroundTransparency=1,Size=UDim2.new(0,72,1,0),BorderSizePixel=0,ZIndex=7,AutoButtonColor=false,TextXAlignment=Enum.TextXAlignment.Center},tabCont)
+            local btn=ni("TextButton",{Text=name,Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.tabIdle,BackgroundTransparency=1,Size=UDim2.new(0,68,1,0),BorderSizePixel=0,ZIndex=7,AutoButtonColor=false,TextXAlignment=Enum.TextXAlignment.Center},tabCont)
             local ind=ni("Frame",{Size=UDim2.new(1,0,0,2),Position=indPos,BackgroundColor3=T.tabInd,BackgroundTransparency=1,BorderSizePixel=0,ZIndex=8},btn)
             navTabBtns[name]=btn; navTabInds[name]=ind; REG_TABBTNS[name]=btn; REG_TABINDS[name]=ind
-            btn.MouseEnter:Connect(function() if _ACTIVE_TAB~=name then tw(btn,{TextColor3=T.tabHover},0.08) end end)
-            btn.MouseLeave:Connect(function() if _ACTIVE_TAB~=name then tw(btn,{TextColor3=T.tabIdle},0.08) end end)
+            btn.MouseEnter:Connect(function() if _ACTIVE_TAB~=name then tw(btn,{TextColor3=T.tabHover},0.07) end end)
+            btn.MouseLeave:Connect(function() if _ACTIVE_TAB~=name then tw(btn,{TextColor3=T.tabIdle},0.07) end end)
             btn.MouseButton1Click:Connect(function() selTab(name) end)
         end
     end
@@ -215,6 +218,7 @@ local function buildNavLayout()
     local prevTab=_ACTIVE_TAB; _ACTIVE_TAB=nil
     selTab(prevTab or "combat")
 end
+
 
 -- ═══════════════════════════════════════
 --   PAGE FACTORY (two-column scroll)
@@ -963,7 +967,7 @@ local function buildOptions()
     local themeNames={}; for k in pairs(THEMES) do table.insert(themeNames,k) end; table.sort(themeNames)
     dropRow(L,"theme",themeNames,"lunatic (default)",function(v) applyTheme(v) end)
     spacer(L,2)
-    dropRow(L,"nav position",{"left","right","top","bottom"},"left",function(v)
+    dropRow(L,"nav position",{"top","left","right","bottom"},"top",function(v)
         T.navMode=v; task.defer(buildNavLayout)
     end)
     sldRow(L,"ui opacity",0,100,100,function(v) return v.."%" end,function(v) MF.BackgroundTransparency=1-(v/100) end)
