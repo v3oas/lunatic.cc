@@ -16,66 +16,51 @@ keyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 pcall(function() keyGui.Parent = game:GetService("CoreGui") end)
 if not keyGui.Parent then keyGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui") end
 
-local keyBlur = Instance.new("BlurEffect"); keyBlur.Size = 18; keyBlur.Parent = game:GetService("Lighting")
+local keyBlur = Instance.new("BlurEffect"); keyBlur.Size = 20; keyBlur.Parent = game:GetService("Lighting")
 
 local function kni(class,props,parent) local o=Instance.new(class); for k,v in pairs(props or {}) do pcall(function() o[k]=v end) end; if parent then o.Parent=parent end; return o end
 
--- dark full-screen backdrop
-local keyBG=kni("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=Color3.fromRGB(4,3,8),BackgroundTransparency=0.35,BorderSizePixel=0,ZIndex=1},keyGui)
-
 local keyBox = Instance.new("Frame")
-keyBox.Size = UDim2.new(0,320,0,188); keyBox.Position = UDim2.new(0.5,-160,0.5,-94)
-keyBox.BackgroundColor3 = Color3.fromRGB(9,8,14); keyBox.BackgroundTransparency = 0
+keyBox.Size = UDim2.new(0,340,0,215); keyBox.Position = UDim2.new(0.5,-170,0.5,-107)
+keyBox.BackgroundColor3 = Color3.fromRGB(11,9,18); keyBox.BackgroundTransparency = 0.05
 keyBox.BorderSizePixel = 0; keyBox.ZIndex = 2; keyBox.Parent = keyGui
--- sharp corners — radius 0 except very slight 2px
-local kbc = Instance.new("UICorner",keyBox); kbc.CornerRadius = UDim.new(0,2)
-local kbs = Instance.new("UIStroke",keyBox); kbs.Color = Color3.fromRGB(55,30,100); kbs.Thickness = 1
-
--- top accent bar
-local kAccent=kni("Frame",{Size=UDim2.new(1,0,0,2),Position=UDim2.new(0,0,0,0),BackgroundColor3=Color3.fromRGB(90,52,188),BorderSizePixel=0,ZIndex=4},keyBox)
-kni("UICorner",{CornerRadius=UDim.new(0,2)},kAccent)
+local kbc = Instance.new("UICorner",keyBox); kbc.CornerRadius = UDim.new(0,14)
+local kbs = Instance.new("UIStroke",keyBox); kbs.Color = Color3.fromRGB(90,45,168); kbs.Thickness = 1.5
 
 local _kDrag,_kOx,_kOy = false,0,0
 keyBox.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then _kDrag=true;_kOx=i.Position.X-keyBox.AbsolutePosition.X;_kOy=i.Position.Y-keyBox.AbsolutePosition.Y end end)
 keyBox.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then _kDrag=false end end)
 game:GetService("UserInputService").InputChanged:Connect(function(i) if _kDrag and i.UserInputType==Enum.UserInputType.MouseMovement then keyBox.Position=UDim2.new(0,i.Position.X-_kOx,0,i.Position.Y-_kOy) end end)
 
--- title
-local keyTitle=kni("TextLabel",{Size=UDim2.new(1,-24,0,28),Position=UDim2.new(0,12,0,14),Text="lunatic.cc",Font=Enum.Font.GothamBold,TextSize=16,TextColor3=Color3.fromRGB(155,110,240),BackgroundTransparency=1,ZIndex=3,TextXAlignment=Enum.TextXAlignment.Left},keyBox)
-local keySub=kni("TextLabel",{Size=UDim2.new(1,-24,0,14),Position=UDim2.new(0,12,0,38),Text="authentication required",Font=Enum.Font.Gotham,TextSize=10,TextColor3=Color3.fromRGB(65,48,98),BackgroundTransparency=1,ZIndex=3,TextXAlignment=Enum.TextXAlignment.Left},keyBox)
+local gLine=kni("Frame",{Size=UDim2.new(0,200,0,2),Position=UDim2.new(0.5,-100,0,20),BackgroundColor3=Color3.fromRGB(100,55,205),BorderSizePixel=0,ZIndex=3},keyBox)
+kni("UICorner",{CornerRadius=UDim.new(0,2)},gLine)
+local gGrad=kni("UIGradient",{},gLine)
+gGrad.Color=ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(0,0,0)),ColorSequenceKeypoint.new(0.5,Color3.fromRGB(148,88,255)),ColorSequenceKeypoint.new(1,Color3.fromRGB(0,0,0))}
 
--- separator
-kni("Frame",{Size=UDim2.new(1,-24,0,1),Position=UDim2.new(0,12,0,58),BackgroundColor3=Color3.fromRGB(28,18,50),BorderSizePixel=0,ZIndex=3},keyBox)
-
--- input
-local keyInput=kni("TextBox",{Size=UDim2.new(1,-24,0,32),Position=UDim2.new(0,12,0,68),BackgroundColor3=Color3.fromRGB(13,11,20),BorderSizePixel=0,Text="",PlaceholderText="paste key here...",Font=Enum.Font.Gotham,TextSize=11,TextColor3=Color3.fromRGB(188,170,218),PlaceholderColor3=Color3.fromRGB(52,38,82),ZIndex=3,ClearTextOnFocus=false},keyBox)
-kni("UICorner",{CornerRadius=UDim.new(0,2)},keyInput)
-kni("UIStroke",{Color=Color3.fromRGB(40,22,75),Thickness=1},keyInput)
+local keyTitle=kni("TextLabel",{Size=UDim2.new(1,0,0,36),Position=UDim2.new(0,0,0,24),Text="lunatic.cc",Font=Enum.Font.GothamBold,TextSize=22,TextColor3=Color3.fromRGB(170,120,255),BackgroundTransparency=1,ZIndex=3},keyBox)
+local keySub=kni("TextLabel",{Size=UDim2.new(1,0,0,16),Position=UDim2.new(0,0,0,58),Text="enter your access key to continue",Font=Enum.Font.Gotham,TextSize=11,TextColor3=Color3.fromRGB(78,58,112),BackgroundTransparency=1,ZIndex=3},keyBox)
+local keyInput=kni("TextBox",{Size=UDim2.new(1,-40,0,36),Position=UDim2.new(0,20,0,84),BackgroundColor3=Color3.fromRGB(16,12,26),BorderSizePixel=0,Text="",PlaceholderText="key here...",Font=Enum.Font.GothamBold,TextSize=13,TextColor3=Color3.fromRGB(195,180,220),PlaceholderColor3=Color3.fromRGB(58,42,90),ZIndex=3,ClearTextOnFocus=false},keyBox)
+kni("UICorner",{CornerRadius=UDim.new(0,8)},keyInput); kni("UIStroke",{Color=Color3.fromRGB(52,30,90),Thickness=1},keyInput)
 kni("UIPadding",{PaddingLeft=UDim.new(0,10)},keyInput)
-
--- confirm button
-local keyBtn=kni("TextButton",{Size=UDim2.new(1,-24,0,30),Position=UDim2.new(0,12,0,112),BackgroundColor3=Color3.fromRGB(72,38,158),BorderSizePixel=0,Text="CONFIRM",Font=Enum.Font.GothamBold,TextSize=11,TextColor3=Color3.fromRGB(212,195,248),ZIndex=3,AutoButtonColor=false},keyBox)
-kni("UICorner",{CornerRadius=UDim.new(0,2)},keyBtn)
-
--- status
-local keyStatus=kni("TextLabel",{Size=UDim2.new(1,-24,0,16),Position=UDim2.new(0,12,0,150),Text="",Font=Enum.Font.Gotham,TextSize=10,TextColor3=Color3.fromRGB(200,72,72),BackgroundTransparency=1,ZIndex=3,TextXAlignment=Enum.TextXAlignment.Left},keyBox)
+local keyBtn=kni("TextButton",{Size=UDim2.new(1,-40,0,36),Position=UDim2.new(0,20,0,132),BackgroundColor3=Color3.fromRGB(100,55,205),BorderSizePixel=0,Text="unlock",Font=Enum.Font.GothamBold,TextSize=13,TextColor3=Color3.new(1,1,1),ZIndex=3,AutoButtonColor=false},keyBox)
+kni("UICorner",{CornerRadius=UDim.new(0,8)},keyBtn)
+local keyStatus=kni("TextLabel",{Size=UDim2.new(1,0,0,18),Position=UDim2.new(0,0,0,174),Text="",Font=Enum.Font.Gotham,TextSize=10,TextColor3=Color3.fromRGB(220,80,80),BackgroundTransparency=1,ZIndex=3},keyBox)
 
 local keyUnlocked = false
-keyBtn.MouseEnter:Connect(function() TweenService_K:Create(keyBtn,TweenInfo.new(0.07),{BackgroundColor3=Color3.fromRGB(95,52,188)}):Play() end)
-keyBtn.MouseLeave:Connect(function() TweenService_K:Create(keyBtn,TweenInfo.new(0.07),{BackgroundColor3=Color3.fromRGB(72,38,158)}):Play() end)
+keyBtn.MouseEnter:Connect(function() TweenService_K:Create(keyBtn,TweenInfo.new(0.08),{BackgroundColor3=Color3.fromRGB(130,80,235)}):Play() end)
+keyBtn.MouseLeave:Connect(function() TweenService_K:Create(keyBtn,TweenInfo.new(0.08),{BackgroundColor3=Color3.fromRGB(100,55,205)}):Play() end)
 keyBtn.MouseButton1Click:Connect(function()
     if keyInput.Text == VALID_KEY then
-        keyStatus.TextColor3=Color3.fromRGB(72,210,108); keyStatus.Text="✓  access granted"
-        task.delay(0.7,function()
-            TweenService_K:Create(keyBlur,TweenInfo.new(0.4,Enum.EasingStyle.Quint),{Size=0}):Play()
-            TweenService_K:Create(keyBox,TweenInfo.new(0.3,Enum.EasingStyle.Quint),{BackgroundTransparency=1}):Play()
-            TweenService_K:Create(keyBG,TweenInfo.new(0.3),{BackgroundTransparency=1}):Play()
-            task.delay(0.35,function() pcall(function() keyGui:Destroy() end); pcall(function() keyBlur:Destroy() end) end)
+        keyStatus.TextColor3=Color3.fromRGB(80,225,120); keyStatus.Text="access granted ✓"
+        task.delay(0.8,function()
+            TweenService_K:Create(keyBlur,TweenInfo.new(0.5,Enum.EasingStyle.Quint),{Size=0}):Play()
+            TweenService_K:Create(keyBox,TweenInfo.new(0.4,Enum.EasingStyle.Quint),{BackgroundTransparency=1,Position=UDim2.new(0.5,-170,0.45,-107)}):Play()
+            task.delay(0.45,function() pcall(function() keyGui:Destroy() end); pcall(function() keyBlur:Destroy() end) end)
             keyUnlocked=true
         end)
     else
-        keyStatus.Text="✕  invalid key"; keyStatus.TextColor3=Color3.fromRGB(210,62,62)
-        TweenService_K:Create(keyBox,TweenInfo.new(0.04,Enum.EasingStyle.Linear,Enum.EasingDirection.Out,4,true),{Position=UDim2.new(0.5,-156,0.5,-94)}):Play()
+        keyStatus.Text="invalid key ✕"; keyStatus.TextColor3=Color3.fromRGB(220,70,70)
+        TweenService_K:Create(keyBox,TweenInfo.new(0.05,Enum.EasingStyle.Linear,Enum.EasingDirection.Out,5,true),{Position=UDim2.new(0.5,-166,0.5,-107)}):Play()
     end
 end)
 
@@ -120,29 +105,22 @@ end
 
 -- ─── theme table ─────────────────────
 local T={
-    -- backgrounds
-    bg=Color3.fromRGB(8,7,12),panel=Color3.fromRGB(11,10,17),
-    navBg=Color3.fromRGB(6,5,10),border=Color3.fromRGB(32,20,58),
-    sep=Color3.fromRGB(22,14,40),inputBg=Color3.fromRGB(11,9,18),
-    scrollbar=Color3.fromRGB(62,38,125),
-    -- tabs
-    tabActive=Color3.fromRGB(210,195,248),tabIdle=Color3.fromRGB(65,48,98),
-    tabHover=Color3.fromRGB(135,112,195),tabInd=Color3.fromRGB(100,58,208),
-    brand=Color3.fromRGB(100,58,205),
-    -- text
-    text=Color3.fromRGB(182,165,212),textDim=Color3.fromRGB(72,55,105),
-    secHdr=Color3.fromRGB(108,70,192),
-    -- accent
-    accent=Color3.fromRGB(95,55,210),accentDim=Color3.fromRGB(42,22,98),
-    accentHover=Color3.fromRGB(148,100,242),
-    -- widgets
-    cbOn=Color3.fromRGB(95,55,210),cbOff=Color3.fromRGB(14,12,22),
-    cbBorder=Color3.fromRGB(42,25,80),cbMark=Color3.fromRGB(248,240,255),
-    slTrack=Color3.fromRGB(14,12,22),slFill=Color3.fromRGB(95,55,210),slKnob=Color3.fromRGB(205,185,248),
-    dropBg=Color3.fromRGB(11,9,18),dropHover=Color3.fromRGB(42,22,88),
-    -- misc
-    navMode="top",overlayAlpha=0.45,blurAmt=6,
-    radius=2,  -- SHARP: near-zero corners everywhere
+    bg=Color3.fromRGB(11,10,16),panel=Color3.fromRGB(16,14,22),
+    navBg=Color3.fromRGB(8,7,13),border=Color3.fromRGB(52,32,88),
+    sep=Color3.fromRGB(28,18,46),inputBg=Color3.fromRGB(14,12,22),
+    scrollbar=Color3.fromRGB(80,50,148),
+    tabActive=Color3.fromRGB(218,196,255),tabIdle=Color3.fromRGB(80,60,112),
+    tabHover=Color3.fromRGB(148,118,200),tabInd=Color3.fromRGB(130,78,222),
+    brand=Color3.fromRGB(118,72,210),
+    text=Color3.fromRGB(192,178,218),textDim=Color3.fromRGB(84,70,114),
+    secHdr=Color3.fromRGB(122,82,198),
+    accent=Color3.fromRGB(120,72,220),accentDim=Color3.fromRGB(58,32,112),
+    accentHover=Color3.fromRGB(160,110,248),
+    cbOn=Color3.fromRGB(120,72,220),cbOff=Color3.fromRGB(18,15,28),
+    cbBorder=Color3.fromRGB(52,32,88),cbMark=Color3.fromRGB(255,255,255),
+    slTrack=Color3.fromRGB(18,15,28),slFill=Color3.fromRGB(120,72,220),slKnob=Color3.fromRGB(212,192,252),
+    dropBg=Color3.fromRGB(14,12,22),dropHover=Color3.fromRGB(58,32,112),
+    navMode="left",overlayAlpha=0.55,blurAmt=8,radius=8,
 }
 
 -- ═══════════════════════════════════════
@@ -559,71 +537,36 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- ═══════════════════════════════════════
---   SILENT AIM — multi-hook (FindPartOnRayWithIgnoreList + __index CFrame for Rivals)
+--   SILENT AIM — FindPartOnRayWithIgnoreList
+--   Only redirects long-range rays (weapon shots).
+--   Camera collision rays are very short (<50 studs) — those are skipped
+--   so the camera never moves visually.
 -- ═══════════════════════════════════════
 local _saTarget=nil
-
--- PRIMARY: hook FindPartOnRayWithIgnoreList (Arsenal hitscan / projectile raycast)
 pcall(function()
     if not hookfunction then return end
-    local oldFPORWIL = hookfunction(workspace.FindPartOnRayWithIgnoreList,
-        newcclosure(function(ws, ray, ignoreList, ...)
+    local orig=hookfunction(workspace.FindPartOnRayWithIgnoreList,
+        newcclosure(function(ws,ray,ignoreList,...)
             if SA.Enabled and _saTarget and _saTarget.Parent then
-                local targetPos = _saTarget.Position
+                -- camera collision rays are short (<50 studs) — skip them entirely
+                -- weapon/bullet rays are typically 500-2000 studs
+                local rayLen=ray.Direction.Magnitude
+                if rayLen < 50 then
+                    return orig(ws,ray,ignoreList,...)
+                end
+                local targetPos=_saTarget.Position
                 if SA.Prediction then
-                    local root = _saTarget.Parent:FindFirstChild("HumanoidRootPart")
+                    local root=_saTarget.Parent:FindFirstChild("HumanoidRootPart")
                     if root then
-                        local vel = root.AssemblyLinearVelocity
-                        targetPos = targetPos + Vector3.new(
-                            vel.X*SA.PredX*0.05, vel.Y*SA.PredY*0.05, vel.Z*SA.PredX*0.05)
+                        local vel=root.AssemblyLinearVelocity
+                        targetPos=targetPos+Vector3.new(vel.X*SA.PredX*0.05,vel.Y*SA.PredY*0.05,vel.Z*SA.PredX*0.05)
                     end
                 end
-                local origin    = ray.Origin
-                local direction = (targetPos - origin).Unit * ray.Direction.Magnitude
-                return oldFPORWIL(ws, Ray.new(origin, direction), ignoreList, ...)
+                local dir=(targetPos-ray.Origin).Unit*rayLen
+                return orig(ws,Ray.new(ray.Origin,dir),ignoreList,...)
             end
-            return oldFPORWIL(ws, ray, ignoreList, ...)
-        end)
-    )
-end)
-
--- SECONDARY: hookmetamethod __index — intercepts camera.CFrame / CoordinateFrame reads
--- Works for Rivals (reads camera.CFrame from custom camera) AND Arsenal (CoordinateFrame)
-pcall(function()
-    if not hookmetamethod then return end
-    local oldIndex
-    oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, index)
-        if SA.Enabled and self == Cam and _saTarget and _saTarget.Parent then
-            local isCoord = (index == "CoordinateFrame")
-            local isCF    = (index == "CFrame")
-            if isCoord or isCF then
-                -- filter by call stack: only redirect when called from weapon/shoot/camera logic
-                local src2 = debug.info(2,"s") or ""; local src3 = debug.info(3,"s") or ""
-                local fn3  = debug.info(debug.info(3,"f"),"n") or ""
-                local relevant =
-                    string.find(src3,"Weapon",1,true) or string.find(src3,"weapon",1,true) or
-                    string.find(src3,"Shoot",1,true)  or string.find(src3,"shoot",1,true)  or
-                    string.find(src3,"Camera",1,true) or string.find(src3,"camera",1,true) or
-                    string.find(src2,"Weapon",1,true) or string.find(src2,"weapon",1,true) or
-                    string.find(src2,"Shoot",1,true)  or string.find(src2,"shoot",1,true)
-                -- Arsenal: additional guard against RotCamera spinning the view
-                local notRot = (fn3 ~= "RotCamera")
-                if relevant and notRot then
-                    local targetPos = _saTarget.Position
-                    if SA.Prediction then
-                        local root = _saTarget.Parent:FindFirstChild("HumanoidRootPart")
-                        if root then
-                            local vel = root.AssemblyLinearVelocity
-                            targetPos = targetPos + Vector3.new(
-                                vel.X*SA.PredX*0.05, vel.Y*SA.PredY*0.05, vel.Z*SA.PredX*0.05)
-                        end
-                    end
-                    return CFrame.new(Cam.CFrame.Position, targetPos)
-                end
-            end
-        end
-        return oldIndex(self, index)
-    end))
+            return orig(ws,ray,ignoreList,...)
+        end))
 end)
 
 -- ═══════════════════════════════════════
