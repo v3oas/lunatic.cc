@@ -141,7 +141,7 @@ local T={
     slTrack=Color3.fromRGB(14,12,22),slFill=Color3.fromRGB(95,55,210),slKnob=Color3.fromRGB(205,185,248),
     dropBg=Color3.fromRGB(11,9,18),dropHover=Color3.fromRGB(42,22,88),
     -- misc
-    navMode="left",overlayAlpha=0.45,blurAmt=6,
+    navMode="top",overlayAlpha=0.45,blurAmt=6,
     radius=2,  -- SHARP: near-zero corners everywhere
 }
 
@@ -1174,7 +1174,7 @@ RunService.RenderStepped:Connect(function(dt)
         saFovFill.Transparency=SA.FOVFillAlpha; saFovFill.Visible=SA.FOVFill and SA.ShowFOV
     end) end
 
-    -- aimbot — FIXED: clear sticky when disabled
+    -- aimbot — camera move only, completely separate from SA
     if AB.Enabled then
         local tgt=nil
         if AB.StickyAim and AB._stickyPl then
@@ -1201,13 +1201,13 @@ RunService.RenderStepped:Connect(function(dt)
             end
         end
     else
-        -- FIXED: always clear sticky when aimbot is disabled
         if AB._stickyTarget or AB._stickyPl then AB._stickyTarget=nil; AB._stickyPl=nil end
     end
 
-    -- silent aim target update (used by hookmetamethod + tracer)
+    -- silent aim — ONLY updates _saTarget, never touches camera
+    -- SA.VisCheck deliberately off so target is locked through walls (hook does redirection silently)
     if SA.Enabled then
-        local _,part=getBestTarget(SA.FOVSize,SA.FOVMouse or true,SA.HitParts,true,SA.TeamCheck,SA.DistLimit,0,false)
+        local _,part=getBestTarget(SA.FOVSize,SA.FOVMouse,SA.HitParts,false,SA.TeamCheck,SA.DistLimit,0,false)
         _saTarget=part
     else
         _saTarget=nil
