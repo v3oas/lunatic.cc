@@ -6,7 +6,7 @@
 -- ═══════════════════════════════════════
 --   KEY SYSTEM
 -- ═══════════════════════════════════════
-local VALID_KEY = "LUNATIC-CORE-9X21"
+local VALID_KEY = "lunatic"
 local TweenService_K = game:GetService("TweenService")
 
 local keyGui = Instance.new("ScreenGui")
