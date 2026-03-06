@@ -50,7 +50,7 @@ local keyUnlocked = false
 keyBtn.MouseEnter:Connect(function() TweenService_K:Create(keyBtn,TweenInfo.new(0.08),{BackgroundColor3=Color3.fromRGB(130,80,235)}):Play() end)
 keyBtn.MouseLeave:Connect(function() TweenService_K:Create(keyBtn,TweenInfo.new(0.08),{BackgroundColor3=Color3.fromRGB(100,55,205)}):Play() end)
 keyBtn.MouseButton1Click:Connect(function()
-    if keyInput.Text == VALID_KEY then
+    if keyInput.Text:lower():gsub("%s+","") == VALID_KEY then
         keyStatus.TextColor3=Color3.fromRGB(80,225,120); keyStatus.Text="access granted ✓"
         task.delay(0.8,function()
             TweenService_K:Create(keyBlur,TweenInfo.new(0.5,Enum.EasingStyle.Quint),{Size=0}):Play()
