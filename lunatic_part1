@@ -1,11 +1,29 @@
 --[[
-    lunatic.cc | v7.0 | part1
+    lunatic.cc | v7.0 INTEGRATED | part1
+    MERGED: lunatic.cc core + Script.lua (juju) functions
     core · logic · drawing · exports
 --]]
 
+repeat task["wait"]() until game:IsLoaded()
+
+if (identifyexecutor() == "AWP" or identifyexecutor() == "Nihon") then
+    pcall(function() cleardrawcache() end)
+end
+
 -- ═══════════════════════════════════════
---   KEY SYSTEM
+--   LURAPH COMPATIBILITY
 -- ═══════════════════════════════════════
+if not LPH_OBFUSCATED then
+    LPH_JIT_MAX = function(...) return ... end
+    LPH_NO_VIRTUALIZE = function(...) return ... end
+    LPH_ENCSTR = function(...) return ... end
+    LPH_NO_UPVALUES = function(...) return ... end
+    LPH_JIT = function(...) return ... end
+end
+
+getgenv()["juju"] = {}
+getgenv()["lunatic_integrated"] = {}
+
 -- ═══════════════════════════════════════
 --   SERVICES & LOCALS
 -- ═══════════════════════════════════════
@@ -17,10 +35,19 @@ local Lighting         = game:GetService("Lighting")
 local HttpService      = game:GetService("HttpService")
 local CoreGui          = game:GetService("CoreGui")
 local MarketplaceService = game:GetService("MarketplaceService")
+local ContextActionService = game:GetService("ContextActionService")
 
 local LP    = Players.LocalPlayer
 local PGui  = LP:WaitForChild("PlayerGui")
 local Cam   = workspace.CurrentCamera
+
+local user_input_service = UserInputService
+local players_service = Players
+local local_player = LP
+local mouse = local_player:GetMouse()
+local tween_service = TweenService
+local http_service = HttpService
+local camera = Cam
 
 -- ─── utils ───────────────────────────
 local function tw(obj,props,dur,style,dir)
@@ -64,7 +91,7 @@ local T={
 }
 
 -- ═══════════════════════════════════════
---   STATE TABLES
+--   STATE TABLES (LUNATIC.CC + JUJU)
 -- ═══════════════════════════════════════
 local AB={
     Enabled=false,Mode="CamLock",VisCheck=false,TeamCheck=true,
@@ -107,11 +134,8 @@ local LocalESP={Enabled=false,Material="Neon",Color=Color3.fromRGB(150,72,248),T
 local HBX={Enabled=false,Size=5,Transparency=1,Parts={"Head","HumanoidRootPart","LeftUpperLeg","RightUpperLeg"}}
 local WalkMod={Enabled=false,Speed=16}
 local JumpMod={Enabled=false,Power=50,InfJump=false}
--- CFrameMove: replaces vsync, moves character via CFrame directly
 local CFrameMove={Enabled=false,Speed=60}
--- CFrameFly: fly via CFrame manipulation (smooth, no physics jank)
 local CFrameFly={Enabled=false,Speed=80,_bodyGyro=nil,_bodyPos=nil}
--- VelocityFly: old velocity-based flight (kept as backup)
 local VelocityFly={Enabled=false,Speed=80,_wasOn=false}
 local SpinBot={Enabled=false,Speed=18}
 local FakeLag={Enabled=false,Frames=6}
@@ -244,17 +268,14 @@ end
 -- ═══════════════════════════════════════
 --   MOVEMENT SYSTEMS
 -- ═══════════════════════════════════════
--- spinbot
-local _spinAngle=0
 RunService.Heartbeat:Connect(function(dt)
     if not SpinBot.Enabled then return end
     local c=LP.Character; if not c then return end
     local root=c:FindFirstChild("HumanoidRootPart"); if not root then return end
-    _spinAngle=(_spinAngle+SpinBot.Speed)%360
-    root.CFrame=CFrame.new(root.Position)*CFrame.Angles(0,math.rad(_spinAngle),0)
+    local angle=(angle or 0)+(SpinBot.Speed)
+    root.CFrame=CFrame.new(root.Position)*CFrame.Angles(0,math.rad(angle),0)
 end)
 
--- walkspeed lock
 RunService.Heartbeat:Connect(function()
     if WalkMod.Enabled then
         local c=LP.Character; local hum=c and c:FindFirstChild("Humanoid")
@@ -262,9 +283,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- ─── CFRAME MOVEMENT (replaces vsync) ──────────
--- moves character by directly setting HumanoidRootPart.CFrame each frame
--- smooth, server-safe movement without velocity artifacts
 RunService.RenderStepped:Connect(function(dt)
     if not CFrameMove.Enabled then return end
     local c=LP.Character; if not c then return end
@@ -272,15 +290,11 @@ RunService.RenderStepped:Connect(function(dt)
     local hum=c:FindFirstChild("Humanoid"); if not hum then return end
     local dir=hum.MoveDirection
     if dir.Magnitude>0.01 then
-        -- Move using CFrame translation — bypasses physics engine smoothly
         local move=dir.Unit*CFrameMove.Speed*dt
         root.CFrame=root.CFrame+move
     end
 end)
 
--- ─── CFRAME FLY ──────────────────────
--- Uses CFrame to move the character through the air directly
--- More reliable than velocity-based fly; camera-relative WASD controls
 local _cffWasOn=false
 RunService.RenderStepped:Connect(function(dt)
     local c=LP.Character; if not c then return end
@@ -296,7 +310,6 @@ RunService.RenderStepped:Connect(function(dt)
     if not CFrameFly.Enabled then return end
     _cffWasOn=true
 
-    -- Freeze physics so gravity doesn't pull character down
     pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Physics,true) end)
     hum:ChangeState(Enum.HumanoidStateType.Physics)
 
@@ -310,13 +323,11 @@ RunService.RenderStepped:Connect(function(dt)
     if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then mv=mv-Vector3.new(0,1,0) end
 
     if mv.Magnitude>0.001 then
-        -- Directly set CFrame position (no velocity, no physics drift)
         local newPos=root.Position+mv.Unit*CFrameFly.Speed*dt
         root.CFrame=CFrame.new(newPos)*CFrame.Angles(0,math.atan2(-cf.LookVector.X,-cf.LookVector.Z),0)
     end
 end)
 
--- ─── VELOCITY FLY (legacy, kept) ─────
 local _vflightWasOn=false
 RunService.Heartbeat:Connect(function(dt)
     local c=LP.Character; if not c then return end
@@ -342,7 +353,6 @@ RunService.Heartbeat:Connect(function(dt)
     if mv.Magnitude>0.001 then root.AssemblyLinearVelocity=mv.Unit*VelocityFly.Speed else root.AssemblyLinearVelocity=Vector3.zero end
 end)
 
--- noclip
 RunService.Stepped:Connect(function()
     if not MiscMov.Noclip then return end
     local c=LP.Character; if not c then return end
@@ -351,14 +361,12 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- no fall damage
 RunService.Heartbeat:Connect(function()
     if not MiscMov.NoFallDmg then return end
     local c=LP.Character; local hum=c and c:FindFirstChild("Humanoid"); if not hum then return end
     hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown,false)
 end)
 
--- super jump / inf jump
 UserInputService.JumpRequest:Connect(function()
     if MiscMov.SuperJump then
         local c=LP.Character; local h=c and c:FindFirstChild("Humanoid"); if h then h.JumpPower=300 end
@@ -384,7 +392,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- fake lag
 local _fakeLagConn
 local function setFakeLag(enabled,frames)
     if _fakeLagConn then _fakeLagConn:Disconnect(); _fakeLagConn=nil end
@@ -399,8 +406,7 @@ local function setFakeLag(enabled,frames)
     end)
 end
 
--- triggerbot hitbox visualization — runs every frame so size updates live with HitboxMult
-local _tbHLs={}  -- [player] = Highlight instance
+local _tbHLs={}
 RunService.Heartbeat:Connect(function()
     for _,pl in ipairs(Players:GetPlayers()) do
         if pl==LP or not pl.Character then
@@ -417,7 +423,6 @@ RunService.Heartbeat:Connect(function()
             local hl=_tbHLs[pl]
             hl.Adornee=pl.Character
             hl.FillColor=TB.VisColor; hl.OutlineColor=TB.VisColor
-            -- scale hitbox parts every frame so changes to HitboxMult are immediately visible
             local mult=TB.HitboxMult or 1
             if mult>1 then
                 for _,partName in ipairs(TB.HitParts or {"Head"}) do
@@ -437,7 +442,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- triggerbot
 RunService.Heartbeat:Connect(function()
     if not TB.Enabled then return end
     local ctr=aimCenter(false)
@@ -476,11 +480,6 @@ RunService.Heartbeat:Connect(function()
     end)
 end)
 
--- ═══════════════════════════════════════
---   SILENT AIM — __namecall dual hook
---
---   Arsenal/Rivals use workspace:Raycast() (new API) for hit detection.
---   We intercept __namecall and handle two cases:
 -- ═══════════════════════════════════════
 --   SILENT AIM
 -- ═══════════════════════════════════════
@@ -539,14 +538,13 @@ end)
 
 local _saTracerLine; pcall(function() _saTracerLine=Drawing.new("Line"); _saTracerLine.Visible=false; _saTracerLine.Thickness=1.5; _saTracerLine.ZIndex=8; _saTracerLine.Color=SA.TracerColor end)
 
--- custom cursor lines (odd=main ZIndex10, even=outline ZIndex8 — outline renders BEHIND main)
 local _curLines={}
 pcall(function()
     for i=1,8 do
         _curLines[i]=Drawing.new("Line")
         _curLines[i].Visible=false
         _curLines[i].Thickness=1.5
-        _curLines[i].ZIndex = (i%2==1) and 10 or 8  -- odd=main(top), even=outline(behind)
+        _curLines[i].ZIndex = (i%2==1) and 10 or 8
     end
 end)
 
@@ -563,42 +561,31 @@ end
 local function makeESP(pl)
     if espData[pl] then return end
     espData[pl]={
-        -- 2d full box
         BT=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1.5,ZIndex=5}),BB=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1.5,ZIndex=5}),
         BL=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1.5,ZIndex=5}),BR=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1.5,ZIndex=5}),
-        -- corner box (8 lines = 4 corners x 2 lines each)
         C1=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1.5,ZIndex=5}),C2=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1.5,ZIndex=5}),
         C3=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1.5,ZIndex=5}),C4=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1.5,ZIndex=5}),
         C5=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1.5,ZIndex=5}),C6=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1.5,ZIndex=5}),
         C7=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1.5,ZIndex=5}),C8=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1.5,ZIndex=5}),
-        -- box fill (square)
         BFill=safeD("Square",{Visible=false,Filled=true,ZIndex=4}),
-        -- 3d box edges
         E1=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1,ZIndex=5}),E2=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1,ZIndex=5}),
         E3=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1,ZIndex=5}),E4=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1,ZIndex=5}),
         E5=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1,ZIndex=5}),E6=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1,ZIndex=5}),
         E7=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1,ZIndex=5}),E8=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1,ZIndex=5}),
         E9=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1,ZIndex=5}),E10=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1,ZIndex=5}),
         E11=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1,ZIndex=5}),E12=safeD("Line",{Visible=false,Color=ESP.BoxColor,Thickness=1,ZIndex=5}),
-        -- name
         N=safeD("Text",{Visible=false,Color=ESP.NameColor,Size=13,Center=true,Outline=true,Font=2,ZIndex=5}),
-        -- health bar bg + fg
         HBG=safeD("Line",{Visible=false,Color=Color3.fromRGB(8,5,16),Thickness=4,ZIndex=4}),
         HFG=safeD("Line",{Visible=false,Color=ESP.HealthColor,Thickness=3,ZIndex=5}),
-        -- distance text
         DT=safeD("Text",{Visible=false,Color=ESP.DistColor,Size=11,Center=true,Outline=true,Font=2,ZIndex=5}),
-        -- tracer
         TR=safeD("Line",{Visible=false,Color=ESP.TracerColor,Thickness=1,ZIndex=4}),
-        -- skeleton (12 bones)
         SK1=safeD("Line",{Visible=false,Color=ESP.SkeletonColor,Thickness=1,ZIndex=4}),SK2=safeD("Line",{Visible=false,Color=ESP.SkeletonColor,Thickness=1,ZIndex=4}),
         SK3=safeD("Line",{Visible=false,Color=ESP.SkeletonColor,Thickness=1,ZIndex=4}),SK4=safeD("Line",{Visible=false,Color=ESP.SkeletonColor,Thickness=1,ZIndex=4}),
         SK5=safeD("Line",{Visible=false,Color=ESP.SkeletonColor,Thickness=1,ZIndex=4}),SK6=safeD("Line",{Visible=false,Color=ESP.SkeletonColor,Thickness=1,ZIndex=4}),
         SK7=safeD("Line",{Visible=false,Color=ESP.SkeletonColor,Thickness=1,ZIndex=4}),SK8=safeD("Line",{Visible=false,Color=ESP.SkeletonColor,Thickness=1,ZIndex=4}),
         SK9=safeD("Line",{Visible=false,Color=ESP.SkeletonColor,Thickness=1,ZIndex=4}),SK10=safeD("Line",{Visible=false,Color=ESP.SkeletonColor,Thickness=1,ZIndex=4}),
         SK11=safeD("Line",{Visible=false,Color=ESP.SkeletonColor,Thickness=1,ZIndex=4}),SK12=safeD("Line",{Visible=false,Color=ESP.SkeletonColor,Thickness=1,ZIndex=4}),
-        -- head dot (circle — fill toggled by ESP.HeadDotFill)
         HD=safeD("Circle",{Visible=false,Color=ESP.HeadDotColor,Thickness=1.5,NumSides=24,Radius=5,Filled=false,ZIndex=6}),
-        -- weapon name text
         WPN=safeD("Text",{Visible=false,Color=ESP.WeaponColor,Size=11,Center=true,Outline=true,Font=2,ZIndex=5}),
     }
 end
@@ -632,7 +619,6 @@ local function updateESP(pl)
     local ch=pl.Character; if not ch then hideESP(pl); return end
     local hum=ch:FindFirstChild("Humanoid"); if not hum then hideESP(pl); return end
     if hum.Health<=0 then hideESP(pl); return end
-    -- team check: skip teammates
     if ESP.TeamCheck and LP.Team and pl.Team and pl.Team==LP.Team then hideESP(pl); return end
     local myR=LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     local root=ch:FindFirstChild("HumanoidRootPart"); local head=ch:FindFirstChild("Head")
@@ -647,7 +633,6 @@ local function updateESP(pl)
     local Lx,Rx,Ty,By=cV.X-wd/2,cV.X+wd/2,tV.Y,bV.Y
     local cl=ht*0.25
 
-    -- full 2D box
     local sb=ESP.Enabled and ESP.BoxEnabled and ESP.BoxMode=="2D"
     pcall(function()
         d.BT.From=Vector2.new(Lx,Ty);d.BT.To=Vector2.new(Rx,Ty);d.BT.Color=ESP.BoxColor;d.BT.Thickness=ESP.BoxThick;d.BT.Visible=sb
@@ -655,14 +640,12 @@ local function updateESP(pl)
         d.BL.From=Vector2.new(Lx,Ty);d.BL.To=Vector2.new(Lx,By);d.BL.Color=ESP.BoxColor;d.BL.Thickness=ESP.BoxThick;d.BL.Visible=sb
         d.BR.From=Vector2.new(Rx,Ty);d.BR.To=Vector2.new(Rx,By);d.BR.Color=ESP.BoxColor;d.BR.Thickness=ESP.BoxThick;d.BR.Visible=sb
     end)
-    -- box fill (square overlay)
     pcall(function()
         local bf=ESP.Enabled and ESP.BoxFill and (ESP.BoxMode=="2D" or ESP.BoxMode=="Corner")
         d.BFill.Position=Vector2.new(Lx,Ty); d.BFill.Size=Vector2.new(Rx-Lx,By-Ty)
         d.BFill.Color=ESP.BoxFillColor or Color3.fromRGB(100,50,200)
         d.BFill.Transparency=ESP.BoxFillTrans or 0.85; d.BFill.Visible=bf
     end)
-    -- corner box
     local cb=ESP.Enabled and ESP.BoxEnabled and ESP.BoxMode=="Corner"
     pcall(function()
         d.C1.From=Vector2.new(Lx,Ty);d.C1.To=Vector2.new(Lx+cl,Ty);d.C1.Color=ESP.BoxColor;d.C1.Thickness=ESP.BoxThick;d.C1.Visible=cb
@@ -674,10 +657,8 @@ local function updateESP(pl)
         d.C7.From=Vector2.new(Rx,By);d.C7.To=Vector2.new(Rx-cl,By);d.C7.Color=ESP.BoxColor;d.C7.Thickness=ESP.BoxThick;d.C7.Visible=cb
         d.C8.From=Vector2.new(Rx,By);d.C8.To=Vector2.new(Rx,By-cl);d.C8.Color=ESP.BoxColor;d.C8.Thickness=ESP.BoxThick;d.C8.Visible=cb
     end)
-    -- hide unused edge lines before 3D logic
     for i=1,12 do pcall(function() d["E"..i].Visible=false end) end
     if ESP.Enabled and ESP.BoxEnabled and ESP.BoxMode=="3D" then draw3DBox(d,ch,ESP.BoxColor) end
-    -- name
     pcall(function()
         local nt=""
         if ESP.NameMode=="Display" then nt=pl.DisplayName
@@ -685,7 +666,6 @@ local function updateESP(pl)
         elseif ESP.NameMode=="Both" then nt=pl.DisplayName.." @"..pl.Name end
         d.N.Position=Vector2.new(cV.X,Ty-16); d.N.Text=nt; d.N.Size=13; d.N.Color=ESP.NameColor; d.N.Visible=ESP.Enabled and ESP.Names
     end)
-    -- health bar
     pcall(function()
         local pct=math.clamp(hum.Health/math.max(hum.MaxHealth,1),0,1)
         local hcol=Color3.fromRGB(math.floor(255*(1-pct)),math.floor(255*pct),50)
@@ -693,19 +673,16 @@ local function updateESP(pl)
         d.HFG.From=Vector2.new(Lx-7,By);d.HFG.To=Vector2.new(Lx-7,By-ht*pct)
         d.HFG.Color=hcol; d.HBG.Visible=ESP.Enabled and ESP.Health; d.HFG.Visible=ESP.Enabled and ESP.Health
     end)
-    -- distance
     pcall(function()
         local dist=myR and math.floor((root.Position-myR.Position).Magnitude) or 0
         d.DT.Text=dist.."m"; d.DT.Position=Vector2.new(cV.X,By+5); d.DT.Color=ESP.DistColor; d.DT.Visible=ESP.Enabled and ESP.Distance
     end)
-    -- weapon ESP (shows equipped tool name, "None" if nothing)
     pcall(function()
         if ESP.Enabled and ESP.Weapon then
             local weaponName="None"
             for _,obj in ipairs(ch:GetChildren()) do
                 if obj:IsA("Tool") then weaponName=obj.Name; break end
             end
-            -- stacked below distance text
             local yOff=By+(ESP.Distance and 18 or 5)
             d.WPN.Text="["..(weaponName~="None" and "⚔ "..weaponName or "None").."]"
             d.WPN.Position=Vector2.new(cV.X,yOff)
@@ -715,7 +692,6 @@ local function updateESP(pl)
             d.WPN.Visible=false
         end
     end)
-    -- tracer
     pcall(function()
         local vp=Cam.ViewportSize; local orig
         if ESP.TracerOrigin=="Mouse" then orig=UserInputService:GetMouseLocation()
@@ -724,7 +700,6 @@ local function updateESP(pl)
         else orig=Vector2.new(vp.X/2,vp.Y) end
         d.TR.From=orig; d.TR.To=cV; d.TR.Color=ESP.TracerColor; d.TR.Visible=ESP.Enabled and ESP.Tracer
     end)
-    -- skeleton
     pcall(function()
         local skVis=ESP.Enabled and ESP.Skeleton
         for i=1,12 do local sk=d["SK"..i]; if sk then sk.Visible=false end end
@@ -752,12 +727,11 @@ local function updateESP(pl)
             end
         end
     end)
-    -- head dot — fill is now toggleable via ESP.HeadDotFill
     pcall(function()
         local hp,hOn=w2s(head.Position)
         d.HD.Position=hp
         d.HD.Color=ESP.HeadDotColor
-        d.HD.Filled=ESP.HeadDotFill     -- FIXED: toggleable fill
+        d.HD.Filled=ESP.HeadDotFill
         d.HD.Radius=5
         d.HD.Thickness=ESP.HeadDotFill and 0 or 1.5
         d.HD.Visible=ESP.Enabled and ESP.HeadDot and hOn
@@ -766,7 +740,6 @@ end
 
 Players.PlayerRemoving:Connect(removeESP)
 
--- ─── chams ───────────────────────────
 local chamHL={}
 local function applyHL(hl)
     hl.Enabled=Chams.Enabled; hl.FillColor=Chams.FillColor; hl.OutlineColor=Chams.OutlineColor
@@ -788,7 +761,6 @@ for _,pl in ipairs(Players:GetPlayers()) do initChams(pl) end
 Players.PlayerAdded:Connect(initChams)
 Players.PlayerRemoving:Connect(function(pl) if chamHL[pl] then chamHL[pl]:Destroy(); chamHL[pl]=nil end end)
 
--- hit chams
 local function initHitChams(pl)
     if pl==LP then return end
     local function onC(char)
@@ -812,7 +784,6 @@ end
 for _,pl in ipairs(Players:GetPlayers()) do initHitChams(pl) end
 Players.PlayerAdded:Connect(initHitChams)
 
--- hitbox extender
 local _hbxOriginals={}
 local function clearHBX()
     for pl,data in pairs(_hbxOriginals) do
@@ -844,7 +815,6 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- local esp
 local function revertLocalESP()
     for _,info in ipairs(LocalESP._originals) do pcall(function() info.p.Material=info.m; info.p.Color=info.c; info.p.Transparency=info.t end) end
     LocalESP._originals={}; LocalESP._applied=false
@@ -865,7 +835,6 @@ local function applyLocalESP()
 end
 LP.CharacterAdded:Connect(function() task.wait(0.6); if LocalESP.Enabled then LocalESP._applied=false; applyLocalESP() end end)
 
--- world fx
 local _colorCorr; pcall(function() _colorCorr=Lighting:FindFirstChildOfClass("ColorCorrectionEffect") or Instance.new("ColorCorrectionEffect",Lighting) end)
 local function applyWorldFX()
     pcall(function()
@@ -877,7 +846,6 @@ local function applyWorldFX()
     end)
 end
 
--- weather
 local _weatherFolder=nil
 local function clearWeather() if _weatherFolder then _weatherFolder:Destroy(); _weatherFolder=nil end end
 local function setWeather(mode)
@@ -886,7 +854,6 @@ local function setWeather(mode)
     if mode=="Fog" then Lighting.FogEnd=120; Lighting.FogStart=0; Lighting.FogColor=Color3.fromRGB(180,180,200) end
 end
 
--- ─── skybox system ───────────────────
 local _origSkyData=nil
 local function applySkybox(name)
     local presets={
@@ -912,7 +879,6 @@ local function applySkybox(name)
     for k,v in pairs(preset) do pcall(function() sky[k]=v end) end
 end
 
--- character changer
 local function applyCharChg(userId)
     local id=tonumber(userId); if not id then return end
     task.spawn(function()
@@ -927,28 +893,26 @@ local function applyCharChg(userId)
     end)
 end
 
--- showNotif — clean toast notification (bottom-right corner, GUI-based)
 local _notifGui=ni("ScreenGui",{Name="lunatic_notif",ResetOnSpawn=false,DisplayOrder=1100,IgnoreGuiInset=true},nil)
 pcall(function() _notifGui.Parent=CoreGui end)
 if not _notifGui.Parent then _notifGui.Parent=PGui end
 
-local _notifStack={}  -- active toasts (so they stack upward)
+local _notifStack={}
 local NOTIF_W,NOTIF_H=220,34
 local NOTIF_PAD=6
-local NOTIF_X=12  -- from right edge
-local NOTIF_Y=12  -- from bottom
+local NOTIF_X=12
+local NOTIF_Y=12
 
 local function showNotif(text,color,icon)
     task.spawn(function()
         local vp=Cam.ViewportSize
-        local slot=#_notifStack  -- how many are currently visible → stack above them
+        local slot=#_notifStack
         local baseY=vp.Y-NOTIF_Y-NOTIF_H
         local startY=baseY-(slot*(NOTIF_H+NOTIF_PAD))
 
-        -- toast frame
         local toast=ni("Frame",{
             Size=UDim2.new(0,NOTIF_W,0,NOTIF_H),
-            Position=UDim2.new(0,vp.X-NOTIF_W-NOTIF_X,0,startY+12),  -- slide in from below
+            Position=UDim2.new(0,vp.X-NOTIF_W-NOTIF_X,0,startY+12),
             BackgroundColor3=Color3.fromRGB(13,11,20),
             BackgroundTransparency=0.08,
             BorderSizePixel=0,
@@ -956,7 +920,6 @@ local function showNotif(text,color,icon)
         },_notifGui)
         mkCorner(6,toast)
 
-        -- left color accent bar
         local accent_col=color or Color3.fromRGB(120,72,220)
         local bar=ni("Frame",{
             Size=UDim2.new(0,3,1,-8),
@@ -966,7 +929,6 @@ local function showNotif(text,color,icon)
         },toast)
         mkCorner(2,bar)
 
-        -- message text
         ni("TextLabel",{
             Text=text,
             Font=Enum.Font.Gotham,
@@ -979,17 +941,14 @@ local function showNotif(text,color,icon)
             TextTruncate=Enum.TextTruncate.AtEnd,
         },toast)
 
-        -- subtle border
         mkStroke(Color3.fromRGB(40,25,70),1,toast)
 
-        -- slide-in tween
         tw(toast,{Position=UDim2.new(0,vp.X-NOTIF_W-NOTIF_X,0,startY)},0.18,Enum.EasingStyle.Quint)
 
         table.insert(_notifStack,toast)
 
         task.wait(2.6)
 
-        -- fade + slide out
         tw(toast,{Position=UDim2.new(0,vp.X-NOTIF_W-NOTIF_X+8,0,startY)},0.2)
         for alpha=0,1,0.07 do
             pcall(function()
@@ -1033,7 +992,6 @@ local MF=ni("Frame",{
 mkCorner(T.radius,MF)
 local mfStroke=mkStroke(T.border,1,MF)
 
--- window drag
 local _drag=false; local _dOx,_dOy=0,0
 MF.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then _drag=true;_dOx=i.Position.X-MF.AbsolutePosition.X;_dOy=i.Position.Y-MF.AbsolutePosition.Y end end)
 MF.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then _drag=false end end)
@@ -1041,7 +999,6 @@ UserInputService.InputChanged:Connect(function(i)
     if _drag and i.UserInputType==Enum.UserInputType.MouseMovement then MF.Position=UDim2.new(0,i.Position.X-_dOx,0,i.Position.Y-_dOy) end
 end)
 
--- dot cursor
 local dotCursor=ni("Frame",{Size=UDim2.new(0,7,0,7),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,ZIndex=999,Visible=false},SGui)
 mkCorner(4,dotCursor); mkStroke(Color3.fromRGB(40,30,60),1,dotCursor)
 
@@ -1050,7 +1007,6 @@ local function setUIVisible(v)
     uiVisible=v; MF.Visible=v
     UserInputService.MouseIconEnabled=not v
     dotCursor.Visible=v
-    -- always release mouse to Default — never lock it from the UI side
     pcall(function() UserInputService.MouseBehavior=Enum.MouseBehavior.Default end)
     tw(blurFX,{Size=v and T.blurAmt or 0},0.3)
     tw(darkOverlay,{BackgroundTransparency=v and (1-T.overlayAlpha) or 1},0.3)
@@ -1066,9 +1022,8 @@ local uiToggleKB=regKB("Toggle UI",Enum.KeyCode.RightShift,"Toggle")
 addKBCb(uiToggleKB,function() setUIVisible(not uiVisible) end)
 
 -- ═══════════════════════════════════════
---   WATERMARK  —  lunatic.cc ♥ | live | GAMENAME
+--   WATERMARK
 -- ═══════════════════════════════════════
--- get game name safely
 local _gameName="unknown"
 task.spawn(function()
     pcall(function() _gameName=MarketplaceService:GetProductInfo(game.PlaceId).Name end)
@@ -1081,7 +1036,7 @@ pcall(function() _wmGui.Parent=CoreGui end)
 if not _wmGui.Parent then _wmGui.Parent=PGui end
 
 local _wmFrame=ni("Frame",{
-    Size=UDim2.new(0,10,0,26),   -- auto-resized below
+    Size=UDim2.new(0,10,0,26),
     Position=UDim2.new(0.5,-80,0,8),
     BackgroundColor3=Color3.fromRGB(8,6,14),
     BackgroundTransparency=0.30,
@@ -1100,11 +1055,9 @@ local _wmLabel=ni("TextLabel",{
     TextXAlignment=Enum.TextXAlignment.Left,
     AutomaticSize=Enum.AutomaticSize.X,
 },_wmFrame)
--- auto-size the frame to fit text + padding
 local _wmPad=ni("UIPadding",{PaddingLeft=UDim.new(0,10),PaddingRight=UDim.new(0,10),PaddingTop=UDim.new(0,0),PaddingBottom=UDim.new(0,0)},_wmFrame)
 _wmFrame.AutomaticSize=Enum.AutomaticSize.X
 
--- update watermark text every 2 seconds to keep "live" fresh
 task.spawn(function()
     while _wmFrame.Parent do
         task.wait(2)
@@ -1112,7 +1065,6 @@ task.spawn(function()
     end
 end)
 
--- draggable watermark
 local _wmDrag=false; local _wmOx,_wmOy=0,0
 _wmFrame.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then _wmDrag=true;_wmOx=i.Position.X-_wmFrame.AbsolutePosition.X;_wmOy=i.Position.Y-_wmFrame.AbsolutePosition.Y end end)
 _wmFrame.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then _wmDrag=false end end)
@@ -1126,14 +1078,12 @@ setWatermark=function(v) Watermark.Enabled=v; _wmFrame.Visible=v end
 --   RENDER LOOP
 -- ═══════════════════════════════════════
 RunService.RenderStepped:Connect(function(dt)
-    -- aimbot fov
     if abFovRing then pcall(function()
         local ctr=aimCenter(AB.FOVMouse)
         abFovRing.Position=ctr; abFovRing.Radius=AB.FOVSize; abFovRing.Color=AB.FOVColor; abFovRing.Visible=AB.ShowFOV
         abFovFill.Position=ctr; abFovFill.Radius=AB.FOVSize; abFovFill.Color=AB.FOVColor
         abFovFill.Transparency=AB.FOVFillAlpha; abFovFill.Visible=AB.FOVFill and AB.ShowFOV
     end) end
-    -- sa fov
     if saFovRing then pcall(function()
         local ctr=aimCenter(SA.FOVMouse)
         saFovRing.Position=ctr; saFovRing.Radius=SA.FOVSize; saFovRing.Color=SA.FOVColor; saFovRing.Visible=SA.ShowFOV
@@ -1141,7 +1091,6 @@ RunService.RenderStepped:Connect(function(dt)
         saFovFill.Transparency=SA.FOVFillAlpha; saFovFill.Visible=SA.FOVFill and SA.ShowFOV
     end) end
 
-    -- aimbot — camera move only, completely separate from SA
     if AB.Enabled then
         local tgt=nil
         if AB.StickyAim and AB._stickyPl then
@@ -1171,15 +1120,12 @@ RunService.RenderStepped:Connect(function(dt)
         if AB._stickyTarget or AB._stickyPl then AB._stickyTarget=nil; AB._stickyPl=nil end
     end
 
-    -- silent aim — ONLY updates _saTarget, never touches camera
-    -- SA.VisCheck deliberately off so target is locked through walls (hook does redirection silently)
     if SA.Enabled then
         local _,part=getBestTarget(SA.FOVSize,SA.FOVMouse,SA.HitParts,false,SA.TeamCheck,SA.DistLimit,0,false)
         _saTarget=part
     else
         _saTarget=nil
     end
-    -- sa standalone tracer line
     if _saTracerLine then pcall(function()
         if SA.Enabled and SA.Tracer and _saTarget then
             local tp,tOn=w2s(_saTarget.Position)
@@ -1188,12 +1134,10 @@ RunService.RenderStepped:Connect(function(dt)
         else _saTracerLine.Visible=false end
     end) end
 
-    -- esp
     for _,pl in ipairs(Players:GetPlayers()) do
         if ESP.Enabled then updateESP(pl) else hideESP(pl) end
     end
 
-    -- custom cursor
     if CursorDraw.Enabled then
         if CursorDraw.Rainbow then CursorDraw._rainbowHue=(CursorDraw._rainbowHue+dt*0.4)%1 end
         local mx=UserInputService:GetMouseLocation().X; local my=UserInputService:GetMouseLocation().Y
@@ -1211,7 +1155,6 @@ RunService.RenderStepped:Connect(function(dt)
                     local ot = CursorDraw.OutlineThick or 1
                     lo.From=Vector2.new(mx+math.cos(a)*3,my+math.sin(a)*3)
                     lo.To=Vector2.new(mx+math.cos(a)*(5+L),my+math.sin(a)*(5+L))
-                    -- dark version of the line color for outline (not pure black)
                     lo.Color=Color3.fromRGB(
                         math.floor(col.R*255*0.12),
                         math.floor(col.G*255*0.12),
@@ -1259,4 +1202,7 @@ _g.mkPad=mkPad; _g.spacer=spacer
 _g.colorToHex=colorToHex; _g.hexToColor=hexToColor
 _g.showNotif=showNotif; _g.getKeyName=getKeyName
 _g.setWatermark=setWatermark; _g.uiToggleKB=uiToggleKB
-_g._saTarget=nil  -- shared reference (updated each frame above)
+_g._saTarget=nil
+_g.WMFrame=_wmFrame
+
+print("[lunatic.cc integrated] part 1 loaded ✓")
