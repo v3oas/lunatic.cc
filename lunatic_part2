@@ -1,12 +1,9 @@
 --[[
-    lunatic.cc | v7.0 | part2
-    navbar · widgets · tabs · keybind widget · configs
+    lunatic.cc | v7.0 INTEGRATED | part2
+    navbar · widgets · tabs · configs
     requires part1 to have run first
 --]]
 
--- ═══════════════════════════════════════
---   IMPORT FROM PART1
--- ═══════════════════════════════════════
 local _g=getgenv()
 local AB,SA,TB,ESP               = _g.AB,_g.SA,_g.TB,_g.ESP
 local CFrameMove,CFrameFly       = _g.CFrameMove,_g.CFrameFly
@@ -39,11 +36,10 @@ local mkPad,spacer               = _g.mkPad,_g.spacer
 local colorToHex,hexToColor      = _g.colorToHex,_g.hexToColor
 local showNotif,getKeyName       = _g.showNotif,_g.getKeyName
 local setWatermark               = _g.setWatermark
-local WMFrame                    = _g.WMFrame   -- exported by part1: getgenv().WMFrame=wmFrame
-local uiToggleKB                 = _g.uiToggleKB or {key=Enum.KeyCode.RightShift,mode="Toggle",state=false,callbacks={}}
+local WMFrame                    = _g.WMFrame
+local uiToggleKB                 = _g.uiToggleKB
 local WalkMod                    = _g.WalkMod
 
--- safety fallbacks — if any import is nil (e.g. re-run without part1), define locally
 ni = ni or function(class,props,parent)
     local o=Instance.new(class)
     for k,v in pairs(props or {}) do pcall(function() o[k]=v end) end
@@ -58,14 +54,10 @@ mkStroke = mkStroke or function(col,thick,p) return ni("UIStroke",{Color=col,Thi
 mkPad    = mkPad    or function(l,r,t,b,p) return ni("UIPadding",{PaddingLeft=UDim.new(0,l or 0),PaddingRight=UDim.new(0,r or 0),PaddingTop=UDim.new(0,t or 0),PaddingBottom=UDim.new(0,b or 0)},p) end
 spacer   = spacer   or function(p,h) ni("Frame",{Size=UDim2.new(1,0,0,h or 4),BackgroundTransparency=1},p) end
 
--- T fallback — if part1 hasn't run, define a minimal theme so mkPage doesn't crash on T.scrollbar etc.
 if not T then
     T={bg=Color3.fromRGB(11,10,16),panel=Color3.fromRGB(16,14,22),navBg=Color3.fromRGB(8,7,13),border=Color3.fromRGB(52,32,88),sep=Color3.fromRGB(28,18,46),inputBg=Color3.fromRGB(14,12,22),scrollbar=Color3.fromRGB(80,50,148),tabActive=Color3.fromRGB(218,196,255),tabIdle=Color3.fromRGB(80,60,112),tabHover=Color3.fromRGB(148,118,200),tabInd=Color3.fromRGB(130,78,222),brand=Color3.fromRGB(118,72,210),text=Color3.fromRGB(192,178,218),textDim=Color3.fromRGB(84,70,114),secHdr=Color3.fromRGB(122,82,198),accent=Color3.fromRGB(120,72,220),accentDim=Color3.fromRGB(58,32,112),accentHover=Color3.fromRGB(160,110,248),cbOn=Color3.fromRGB(120,72,220),cbOff=Color3.fromRGB(18,15,28),cbBorder=Color3.fromRGB(52,32,88),cbMark=Color3.fromRGB(255,255,255),slTrack=Color3.fromRGB(18,15,28),slFill=Color3.fromRGB(120,72,220),slKnob=Color3.fromRGB(212,192,252),dropBg=Color3.fromRGB(14,12,22),dropHover=Color3.fromRGB(58,32,112),navMode="left",overlayAlpha=0.55,blurAmt=8,radius=8}
 end
 
--- ═══════════════════════════════════════
---   LIVE WIDGET REGISTRIES
--- ═══════════════════════════════════════
 local REG_CB={}; local REG_SL={}; local REG_SECHDR={}; local REG_TEXT={}
 local REG_TABBTNS={}; local REG_TABINDS={}; local REG_COL={}
 
@@ -98,7 +90,7 @@ local function refreshTheme()
         end)
     end
     for name,btn in pairs(REG_TABBTNS) do
-        pcall(function() btn.TextColor3=(name==_ACTIVE_TAB) and T.tabActive or T.tabIdle end)
+        pcall(function() btn.TextColor3=(_ACTIVE_TAB==name) and T.tabActive or T.tabIdle end)
     end
     for _,ind in pairs(REG_TABINDS) do
         pcall(function() ind.BackgroundColor3=T.tabInd end)
@@ -110,9 +102,6 @@ local function refreshTheme()
     end
 end
 
--- ═══════════════════════════════════════
---   NAV + TAB SYSTEM
--- ═══════════════════════════════════════
 local NavBar, ContentArea
 local _ACTIVE_TAB = nil
 local tabDefs = {"combat","visuals","mod","players","options","configs"}
@@ -180,7 +169,6 @@ local function buildNavLayout()
         ni("Frame",{Size=UDim2.new(1,0,0,1),Position=mode=="top" and UDim2.new(0,0,1,-1) or UDim2.new(0,0,0,0),BackgroundColor3=T.sep,BorderSizePixel=0,ZIndex=6},NavBar)
     end
 
-    -- macOS traffic-light buttons
     local macCY = isSide and 9 or (NAV_TOP_H/2-5)
     local function macBtn(col,hov,xOff)
         local b=ni("TextButton",{Size=UDim2.new(0,11,0,11),Position=UDim2.new(0,xOff,0,macCY),BackgroundColor3=col,Text="",BorderSizePixel=0,ZIndex=10,AutoButtonColor=false},NavBar)
@@ -213,7 +201,6 @@ local function buildNavLayout()
     end
 
     if isSide then
-        -- brand + version
         local brandLbl=ni("TextLabel",{Text="lunatic.cc",Font=Enum.Font.GothamBold,TextSize=11,TextColor3=T.brand,BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(1,-8,0,18),Position=UDim2.new(0,8,0,30)},NavBar)
         table.insert(REG_TEXT,{lbl=brandLbl,role="brand"})
         local verLbl=ni("TextLabel",{Text="v7.0",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,ZIndex=7,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(1,-8,0,10),Position=UDim2.new(0,8,0,50)},NavBar)
@@ -250,11 +237,6 @@ local function buildNavLayout()
     selTab(prevTab or "combat")
 end
 
-
-
--- ═══════════════════════════════════════
---   PAGE FACTORY (two-column scroll)
--- ═══════════════════════════════════════
 local function mkPage()
     local pg=ni("Frame",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Visible=false},nil)
     local L=ni("ScrollingFrame",{
@@ -568,393 +550,7 @@ end
 
 local BODYPARTS={"Head","Torso","HumanoidRootPart","LeftArm","RightArm","LeftLeg","RightLeg"}
 local TB_PARTS={"Head","Torso","LeftArm","RightArm","LeftLeg","RightLeg","All"}
-local KBWGui -- forward-declared at module scope so unload btn in buildOptions can reach it
-
--- ═══════════════════════════════════════
---   TAB: COMBAT
--- ═══════════════════════════════════════
-local function buildCombat()
-    local L,R=tabPages["combat"].L,tabPages["combat"].R
-    secHdr(L,"aimbot")
-    cbRow(L,"enabled",false,function(v) AB.Enabled=v; if not v then AB._stickyTarget=nil; AB._stickyPl=nil end end,abKB)
-    dropRow(L,"mode",{"CamLock","Mouse"},"CamLock",function(v) AB.Mode=v end)
-    secHdr(L,"ab checks")
-    cbRow(L,"visible check",false,function(v) AB.VisCheck=v end)
-    cbRow(L,"team check",true,function(v) AB.TeamCheck=v end)
-    cbRow(L,"sticky aim",false,function(v) AB.StickyAim=v; if not v then AB._stickyTarget=nil; AB._stickyPl=nil end end)
-    cbRow(L,"health check",false,function(v) AB.HealthCheck=v end)
-    sldRow(L,"min hp",0,100,0,function(v) return v.."hp" end,function(v) AB.HealthMin=v end)
-    cbRow(L,"knock check",false,function(v) AB.KnockCheck=v end)
-    spacer(L,2)
-    secHdr(L,"ab fov")
-    cbRow(L,"show fov",true,function(v) AB.ShowFOV=v end)
-    cbRow(L,"fov fill",false,function(v) AB.FOVFill=v end)
-    cbRow(L,"follow mouse",false,function(v) AB.FOVMouse=v end)
-    sldRow(L,"fov size",10,600,150,nil,function(v) AB.FOVSize=v end)
-    colRow(L,"fov color",AB.FOVColor,function(c) AB.FOVColor=c end)
-    spacer(L,2)
-    secHdr(L,"ab settings")
-    sldRow(L,"smoothness",1,30,5,nil,function(v) AB.Smooth=v end)
-    multiDrop(L,"target parts",BODYPARTS,AB.AimParts,function(s) AB.AimParts=s end)
-    textRow(L,"dist limit","inf","number",function(v) local n=tonumber(v); AB.DistLimit=n or math.huge end)
-    spacer(L,2)
-    secHdr(L,"prediction")
-    local predCont=ni("Frame",{Size=UDim2.new(1,0,0,0),BackgroundTransparency=1,ClipsDescendants=true},L)
-    ni("UIListLayout",{Padding=UDim.new(0,0)},predCont); mkPad(8,0,0,0,predCont)
-    sldRow(predCont,"predict x",0,20,5,nil,function(v) AB.PredX=v end)
-    sldRow(predCont,"predict y",0,20,5,nil,function(v) AB.PredY=v end)
-    cbRow(L,"enable prediction",false,function(v) AB.Prediction=v; tw(predCont,{Size=UDim2.new(1,0,0,v and 82 or 0)},0.15) end)
-
-    secHdr(R,"silent aim")
-    ni("TextLabel",{Text="uses hookmetamethod to silently\nredirect FireServer shot calls",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,24),TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left},R)
-    cbRow(R,"enabled",false,function(v) SA.Enabled=v end,saKB)
-    cbRow(R,"team check",true,function(v) SA.TeamCheck=v end)
-    cbRow(R,"follow mouse",true,function(v) SA.FOVMouse=v end)
-    spacer(R,2)
-    secHdr(R,"sa fov")
-    cbRow(R,"show fov",false,function(v) SA.ShowFOV=v end)
-    cbRow(R,"fov fill",false,function(v) SA.FOVFill=v end)
-    sldRow(R,"fov size",10,600,120,nil,function(v) SA.FOVSize=v end)
-    colRow(R,"fov color",SA.FOVColor,function(c) SA.FOVColor=c end)
-    spacer(R,2)
-    secHdr(R,"sa settings")
-    multiDrop(R,"hit parts",BODYPARTS,SA.HitParts,function(s) SA.HitParts=s end)
-    textRow(R,"dist limit","inf","number",function(v) local n=tonumber(v); SA.DistLimit=n or math.huge end)
-    cbColRow(R,"tracer",false,SA.TracerColor,function(v) SA.Tracer=v end,function(c) SA.TracerColor=c end)
-    spacer(R,2)
-    secHdr(R,"sa prediction")
-    local saPCont=ni("Frame",{Size=UDim2.new(1,0,0,0),BackgroundTransparency=1,ClipsDescendants=true},R)
-    ni("UIListLayout",{Padding=UDim.new(0,0)},saPCont); mkPad(8,0,0,0,saPCont)
-    sldRow(saPCont,"predict x",0,20,5,nil,function(v) SA.PredX=v end)
-    sldRow(saPCont,"predict y",0,20,5,nil,function(v) SA.PredY=v end)
-    cbRow(R,"enable prediction",false,function(v) SA.Prediction=v; tw(saPCont,{Size=UDim2.new(1,0,0,v and 82 or 0)},0.15) end)
-    spacer(R,4)
-    secHdr(R,"triggerbot")
-    cbRow(R,"enabled",false,function(v) TB.Enabled=v end,tbKB)
-    cbRow(R,"visible check",false,function(v) TB.VisCheck=v end)
-    cbRow(R,"team check",true,function(v) TB.TeamCheck=v end)
-    sldRow(R,"fire delay",0,500,50,function(v) return v.."ms" end,function(v) TB.Delay=v/1000 end)
-    sldRow(R,"hitbox mult",1,5,1,function(v) return "x"..string.format("%.1f",v) end,function(v) TB.HitboxMult=v end)
-    multiDrop(R,"hit parts",TB_PARTS,TB.HitParts,function(s) TB.HitParts=s end)
-    cbColRow(R,"visualize hitbox",false,TB.VisColor,function(v) TB.Visualize=v end,function(c) TB.VisColor=c end)
-end
-
--- ═══════════════════════════════════════
---   TAB: VISUALS
--- ═══════════════════════════════════════
-local function buildVisuals()
-    local L,R=tabPages["visuals"].L,tabPages["visuals"].R
-    secHdr(L,"esp")
-    cbRow(L,"enabled",false,function(v) ESP.Enabled=v end)
-    cbRow(L,"team check",true,function(v) ESP.TeamCheck=v end)
-    cbRow(L,"visible only",false,function(v) ESP.VisOnly=v end)
-    textRow(L,"dist limit","inf","number",function(v) local n=tonumber(v); ESP.DistLimit=n or math.huge end)
-    spacer(L,2)
-    secHdr(L,"box")
-    cbRow(L,"box",true,function(v) ESP.BoxEnabled=v end)
-    dropRow(L,"box type",{"Corner","2D","3D"},"Corner",function(v) ESP.BoxMode=v end)
-    colRow(L,"box color",ESP.BoxColor,function(c) ESP.BoxColor=c end)
-    sldRow(L,"thickness",0.5,4,1.5,function(v) return string.format("%.1f",v) end,function(v) ESP.BoxThick=v end)
-    secHdr(L,"box fill")
-    cbRow(L,"fill enabled",false,function(v) ESP.BoxFill=v end)
-    colRow(L,"fill color",ESP.BoxFillColor or Color3.fromRGB(100,50,200),function(c) ESP.BoxFillColor=c end)
-    sldRow(L,"fill alpha",0,100,85,function(v) return v.."%" end,function(v) ESP.BoxFillTrans=v/100 end)
-    spacer(L,2)
-    secHdr(L,"name & health")
-    cbColRow(L,"names",true,ESP.NameColor,function(v) ESP.Names=v end,function(c) ESP.NameColor=c end)
-    dropRow(L,"name mode",{"Display","Username","Both"},"Display",function(v) ESP.NameMode=v end)
-    cbColRow(L,"health bar",true,ESP.HealthColor,function(v) ESP.Health=v end,function(c) ESP.HealthColor=c end)
-    spacer(L,2)
-    secHdr(L,"overlays")
-    cbColRow(L,"distance",true,ESP.DistColor,function(v) ESP.Distance=v end,function(c) ESP.DistColor=c end)
-    cbColRow(L,"tracer",false,ESP.TracerColor,function(v) ESP.Tracer=v end,function(c) ESP.TracerColor=c end)
-    dropRow(L,"tracer origin",{"Bottom","Top","Middle","Mouse"},"Bottom",function(v) ESP.TracerOrigin=v end)
-    spacer(L,2)
-    secHdr(L,"skeleton & dots")
-    cbColRow(L,"skeleton",false,ESP.SkeletonColor,function(v) ESP.Skeleton=v end,function(c) ESP.SkeletonColor=c end)
-    cbColRow(L,"head dot",true,ESP.HeadDotColor,function(v) ESP.HeadDot=v end,function(c) ESP.HeadDotColor=c end)
-    -- FIXED: head dot fill is now a separate toggle (not filled by default)
-    cbRow(L,"head dot fill",false,function(v) ESP.HeadDotFill=v end)
-    spacer(L,2)
-    secHdr(L,"weapon esp")
-    cbColRow(L,"show weapon",true,ESP.WeaponColor or Color3.fromRGB(255,200,100),function(v) ESP.Weapon=v end,function(c) ESP.WeaponColor=c end)
-    ni("TextLabel",{Text="shows equipped tool below player.\ndisplays 'None' when nothing held.",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,24),TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left},L)
-
-    -- right col
-    secHdr(R,"chams")
-    cbRow(R,"enabled",false,function(v) Chams.Enabled=v; refreshChams() end)
-    cbRow(R,"through walls",true,function(v) Chams.ThroughWalls=v; refreshChams() end)
-    colRow(R,"fill color",Chams.FillColor,function(c) Chams.FillColor=c; refreshChams() end)
-    colRow(R,"outline color",Chams.OutlineColor,function(c) Chams.OutlineColor=c; refreshChams() end)
-    sldRow(R,"fill alpha",0,100,50,function(v) return v.."%" end,function(v) Chams.FillTransp=v/100; refreshChams() end)
-    sldRow(R,"outline alpha",0,100,0,function(v) return v.."%" end,function(v) Chams.OutTransp=v/100; refreshChams() end)
-    spacer(R,2)
-    secHdr(R,"hit chams")
-    cbColRow(R,"enabled",false,HitChams.Color,function(v) HitChams.Enabled=v end,function(c) HitChams.Color=c end)
-    sldRow(R,"duration",0.05,1,0.18,function(v) return string.format("%.2fs",v) end,function(v) HitChams.Duration=v end)
-    cbRow(R,"hit sound",false,function(v) HitChams.Sound=v end)
-    spacer(R,2)
-    secHdr(R,"hitbox extender")
-    cbRow(R,"enabled",false,function(v) HBX.Enabled=v; if not v then clearHBX() end end)
-    sldRow(R,"size",1,20,5,function(v) return "x"..v end,function(v) HBX.Size=v; clearHBX() end)
-    sldRow(R,"transparency",0,1,1,function(v) return string.format("%.1f",v) end,function(v) HBX.Transparency=v end)
-    multiDrop(R,"parts",{"Head","HumanoidRootPart","LeftUpperLeg","RightUpperLeg","LeftLowerLeg","RightLowerLeg","UpperTorso","Torso"},HBX.Parts,function(s) HBX.Parts=s; clearHBX() end)
-    spacer(R,2)
-    secHdr(R,"local esp")
-    cbRow(R,"enabled",false,function(v) LocalESP.Enabled=v; applyLocalESP() end)
-    dropRow(R,"material",{"Neon","ForceField"},"Neon",function(v) LocalESP.Material=v; if LocalESP.Enabled then LocalESP._applied=false; applyLocalESP() end end)
-    colRow(R,"color",LocalESP.Color,function(c) LocalESP.Color=c; if LocalESP.Enabled then LocalESP._applied=false; applyLocalESP() end end)
-    spacer(R,2)
-    secHdr(R,"world fx")
-    cbRow(R,"no fog",false,function(v) WorldFX.NoFog=v end)
-    cbRow(R,"fullbright",false,function(v) WorldFX.Fullbright=v end)
-    sldRow(R,"brightness",0,10,2,nil,function(v) WorldFX.Brightness=v end)
-    sldRow(R,"saturation",-1,1,0,function(v) return string.format("%.2f",v) end,function(v) WorldFX.Saturation=v end)
-    colRow(R,"tint",WorldFX.TintColor,function(c) WorldFX.TintColor=c end)
-    dropRow(R,"time of day",{"Morning","Noon","Sunset","Night"},"Noon",function(v)
-        local m={Morning="07:00:00",Noon="12:00:00",Sunset="18:00:00",Night="00:00:00"}
-        WorldFX.TimeOfDay=m[v] or "12:00:00"
-    end)
-    dropRow(R,"weather",{"None","Rain","Fog"},"None",function(v) WorldFX.WeatherMode=v; setWeather(v) end)
-    spacer(R,4)
-    secHdr(R,"skybox")
-    dropRow(R,"preset",{"default","black storm","pink sky","blue storm","blue galaxy","night city","void","cherry blossom","sunset"},"default",function(v) applySkybox(v) end)
-    spacer(R,4)
-    secHdr(R,"cursor")
-    cbRow(R,"custom cursor",false,function(v) CursorDraw.Enabled=v end)
-    cbRow(R,"rainbow",false,function(v) CursorDraw.Rainbow=v end)
-    cbRow(R,"outline",false,function(v) CursorDraw.Outline=v end)
-    sldRow(R,"outline thickness",0.5,4,1,function(v) return string.format("%.1f",v) end,function(v) CursorDraw.OutlineThick=v end)
-    cbRow(R,"spin",false,function(v) CursorDraw.Spin=v end)
-    sldRow(R,"length",4,60,10,nil,function(v) CursorDraw.Length=v end)
-    sldRow(R,"thickness",0.5,5,1.5,function(v) return string.format("%.1f",v) end,function(v) CursorDraw.Thickness=v end)
-    colRow(R,"color",CursorDraw.Color,function(c) CursorDraw.Color=c end)
-    sldRow(R,"spin speed",10,360,90,nil,function(v) CursorDraw.SpinSpeed=v end)
-    spacer(R,4)
-    secHdr(R,"watermark")
-    cbRow(R,"show watermark",false,function(v) if setWatermark then setWatermark(v) end end)
-    colRow(R,"watermark color",T.brand,function(c)
-        -- recolor all text in the watermark frame to chosen color
-        if WMFrame then
-            for _,l in ipairs(WMFrame:GetDescendants()) do
-                if l:IsA("TextLabel") then l.TextColor3=c end
-            end
-        end
-    end)
-    ni("TextLabel",{Text="format:  lunatic.cc ♥ | live | gamename\ndraggable — click and drag to reposition",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,24),TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left},R)
-    spacer(R,2)
-    secHdr(R,"hit notifs")
-    cbRow(R,"enabled",false,function(v) HitNotifs.Enabled=v end)
-end
-
--- ═══════════════════════════════════════
---   TAB: MOD
--- ═══════════════════════════════════════
-local function buildMod()
-    local L,R=tabPages["mod"].L,tabPages["mod"].R
-    secHdr(L,"cframe movement")
-    ni("TextLabel",{Text="replaces vsync — moves via direct\nCFrame, no velocity artifacts",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,24),TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left},L)
-    cbRow(L,"enabled",false,function(v) CFrameMove.Enabled=v end,cfmKB)
-    sldRow(L,"speed",10,500,60,nil,function(v) CFrameMove.Speed=v end)
-    spacer(L,2)
-    secHdr(L,"cframe fly")
-    ni("TextLabel",{Text="WASD+camera to fly • Space=up • Ctrl=down",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,14),TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left},L)
-    -- BodyVelocity patch: prevents gravity accumulating while flying
-    local _flyBV=nil
-    local function setFlyPhysics(on)
-        local c=LP.Character; local root=c and c:FindFirstChild("HumanoidRootPart")
-        if on and root then
-            if _flyBV then _flyBV:Destroy() end
-            _flyBV=Instance.new("BodyVelocity"); _flyBV.Velocity=Vector3.new(0,0,0)
-            _flyBV.MaxForce=Vector3.new(0,math.huge,0); _flyBV.P=5e4; _flyBV.Parent=root
-        else
-            if _flyBV then _flyBV:Destroy(); _flyBV=nil end
-        end
-    end
-    LP.CharacterAdded:Connect(function(c)
-        task.wait(0.1); if CFrameFly.Enabled then setFlyPhysics(true) end
-    end)
-    cbRow(L,"enabled",false,function(v) CFrameFly.Enabled=v; setFlyPhysics(v) end,cffKB)
-    sldRow(L,"speed",10,1000,80,nil,function(v) CFrameFly.Speed=v end)
-    spacer(L,2)
-    secHdr(L,"velocity fly (legacy)")
-    cbRow(L,"enabled",false,function(v) VelocityFly.Enabled=v end,vfKB)
-    sldRow(L,"speed",10,1000,80,nil,function(v) VelocityFly.Speed=v end)
-    spacer(L,2)
-    secHdr(L,"walk speed")
-    cbRow(L,"enabled",false,function(v)
-        WalkMod.Enabled=v; wsKB.state=v
-        local c=LP.Character; local h=c and c:FindFirstChild("Humanoid")
-        if h then h.WalkSpeed=v and WalkMod.Speed or 16 end
-    end,wsKB)
-    sldRow(L,"speed",0,1000,16,nil,function(v)
-        WalkMod.Speed=v; if WalkMod.Enabled then local c=LP.Character; local h=c and c:FindFirstChild("Humanoid"); if h then h.WalkSpeed=v end end
-    end)
-    spacer(L,2)
-    secHdr(L,"jump")
-    cbRow(L,"override",false,function(v)
-        JumpMod.Enabled=v; local c=LP.Character; local h=c and c:FindFirstChild("Humanoid")
-        if h then h.JumpPower=v and JumpMod.Power or 50 end
-    end)
-    sldRow(L,"power",0,1000,50,nil,function(v)
-        JumpMod.Power=v; if JumpMod.Enabled then local c=LP.Character; local h=c and c:FindFirstChild("Humanoid"); if h then h.JumpPower=v end end
-    end)
-    cbRow(L,"inf jump",false,function(v) JumpMod.InfJump=v end)
-    cbRow(L,"super jump",false,function(v) MiscMov.SuperJump=v end)
-    spacer(L,2)
-    secHdr(L,"spinbot")
-    cbRow(L,"enabled",false,function(v) SpinBot.Enabled=v end,sbKB)
-    sldRow(L,"speed",1,60,18,nil,function(v) SpinBot.Speed=v end)
-
-    -- right col
-    secHdr(R,"misc movement")
-    cbRow(R,"anti trip",false,function(v) MiscMov.AntiTrip=v end)
-    cbRow(R,"no slowdown",false,function(v) MiscMov.NoSlowdown=v end)
-    cbRow(R,"no jump cooldown",false,function(v) MiscMov.NoJumpCooldown=v end)
-    cbRow(R,"no fall damage",false,function(v) MiscMov.NoFallDmg=v end)
-    cbRow(R,"noclip",false,function(v) MiscMov.Noclip=v end)
-    cbRow(R,"anti afk",false,function(v) MiscMov.AntiAFK=v end)
-    spacer(R,2)
-    secHdr(R,"camera")
-    sldRow(R,"field of view",50,130,70,nil,function(v) Cam.FieldOfView=v end)
-    spacer(R,2)
-    secHdr(R,"fake lag")
-    cbRow(R,"enabled",false,function(v) FakeLag.Enabled=v; setFakeLag(v,FakeLag.Frames) end)
-    sldRow(R,"frames",0,30,6,nil,function(v) FakeLag.Frames=v end)
-    spacer(R,2)
-    secHdr(R,"character")
-    textRow(R,"avatar id","","user id",function(v) CharChg.UserId=v end)
-    local applyBtn=ni("TextButton",{Text="apply character",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.text,BackgroundColor3=T.accentDim,BorderSizePixel=0,Size=UDim2.new(1,0,0,24),AutoButtonColor=false},R)
-    mkCorner(T.radius,applyBtn)
-    applyBtn.MouseEnter:Connect(function() tw(applyBtn,{BackgroundColor3=T.accent},0.07) end)
-    applyBtn.MouseLeave:Connect(function() tw(applyBtn,{BackgroundColor3=T.accentDim},0.07) end)
-    applyBtn.MouseButton1Click:Connect(function() applyCharChg(CharChg.UserId) end)
-    spacer(R,2)
-    secHdr(R,"arsenal / dahood")
-    cbRow(R,"rapid fire",false,function(v) Arsenal.RapidFire=v end)
-    cbRow(R,"infinite ammo",false,function(v)
-        Arsenal.InfAmmo=v
-        if v then RunService.Heartbeat:Connect(function()
-            if not Arsenal.InfAmmo then return end
-            local c=LP.Character; if not c then return end
-            for _,t in ipairs(c:GetChildren()) do
-                if t:IsA("Tool") then
-                    for _,s in ipairs(t:GetDescendants()) do
-                        if s:IsA("IntValue") and (s.Name=="Ammo" or s.Name=="ammo") then s.Value=9999 end
-                    end
-                end
-            end
-        end) end
-    end)
-end
-
--- ═══════════════════════════════════════
---   TAB: PLAYERS
--- ═══════════════════════════════════════
-local function buildPlayers()
-    local L,R=tabPages["players"].L,tabPages["players"].R
-    secHdr(L,"player list")
-    local selPl=nil
-    local infoPanel=ni("Frame",{Size=UDim2.new(1,0,0,0),BackgroundColor3=T.panel,BorderSizePixel=0,Visible=false,ClipsDescendants=true},L)
-    mkCorner(T.radius,infoPanel); mkStroke(T.border,1,infoPanel)
-    local infoName=ni("TextLabel",{Text="",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.tabActive,BackgroundTransparency=1,Size=UDim2.new(1,-8,0,18),Position=UDim2.new(0,6,0,2),TextXAlignment=Enum.TextXAlignment.Left},infoPanel)
-    local infoSub=ni("TextLabel",{Text="",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,-8,0,14),Position=UDim2.new(0,6,0,20),TextXAlignment=Enum.TextXAlignment.Left},infoPanel)
-    local actionRow=ni("Frame",{Size=UDim2.new(1,-12,0,24),Position=UDim2.new(0,6,0,36),BackgroundTransparency=1},infoPanel)
-    ni("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,4)},actionRow)
-    local specBtn=ni("TextButton",{Text="spectate",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.text,BackgroundColor3=T.accentDim,BorderSizePixel=0,Size=UDim2.new(0,62,1,0),AutoButtonColor=false},actionRow); mkCorner(T.radius,specBtn)
-    local unspecBtn=ni("TextButton",{Text="unspectate",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.text,BackgroundColor3=Color3.fromRGB(38,25,62),BorderSizePixel=0,Size=UDim2.new(0,78,1,0),AutoButtonColor=false},actionRow); mkCorner(T.radius,unspecBtn)
-    local flingBtn=ni("TextButton",{Text="fling",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.text,BackgroundColor3=Color3.fromRGB(115,25,25),BorderSizePixel=0,Size=UDim2.new(0,40,1,0),AutoButtonColor=false},actionRow); mkCorner(T.radius,flingBtn)
-    local _specConn=nil; local _specScrollConn=nil
-    local _specDist=12; local _specYaw=0; local _specPitch=20
-    specBtn.MouseButton1Click:Connect(function()
-        if not selPl or not selPl.Character then return end
-        if _specConn then _specConn:Disconnect(); _specConn=nil end
-        if _specScrollConn then _specScrollConn:Disconnect(); _specScrollConn=nil end
-        _specYaw=0; _specPitch=20
-        Cam.CameraType=Enum.CameraType.Scriptable
-        -- lock centre so mouse delta = look direction
-        UserInputService.MouseBehavior=Enum.MouseBehavior.LockCenter
-        _specScrollConn=UserInputService.InputChanged:Connect(function(i)
-            if i.UserInputType==Enum.UserInputType.MouseWheel then
-                _specDist=math.clamp(_specDist-i.Position.Z*2,2,80)
-            elseif i.UserInputType==Enum.UserInputType.MouseMovement then
-                _specYaw  =_specYaw  - i.Delta.X*0.3
-                _specPitch=math.clamp(_specPitch+i.Delta.Y*0.3,-75,75)
-            end
-        end)
-        _specConn=RunService.RenderStepped:Connect(function()
-            if not selPl or not selPl.Character then
-                _specConn:Disconnect(); _specConn=nil
-                if _specScrollConn then _specScrollConn:Disconnect(); _specScrollConn=nil end
-                Cam.CameraType=Enum.CameraType.Custom
-                UserInputService.MouseBehavior=Enum.MouseBehavior.Default; return
-            end
-            local r=selPl.Character:FindFirstChild("HumanoidRootPart")
-            if r then
-                local rot=CFrame.Angles(0,math.rad(_specYaw),0)*CFrame.Angles(math.rad(-_specPitch),0,0)
-                local offset=rot*Vector3.new(0,0,_specDist)
-                local lookAt=r.Position+Vector3.new(0,1.5,0)
-                Cam.CFrame=CFrame.new(lookAt+offset,lookAt)
-            end
-        end)
-    end)
-    unspecBtn.MouseButton1Click:Connect(function()
-        if _specConn then _specConn:Disconnect(); _specConn=nil end
-        if _specScrollConn then _specScrollConn:Disconnect(); _specScrollConn=nil end
-        local c=LP.Character; local hum=c and c:FindFirstChild("Humanoid")
-        Cam.CameraType=Enum.CameraType.Custom; if hum then Cam.CameraSubject=hum end
-        -- release mouse lock - game camera script will take over properly
-        UserInputService.MouseBehavior=Enum.MouseBehavior.Default
-    end)
-    flingBtn.MouseButton1Click:Connect(function()
-        if not selPl or not selPl.Character then return end
-        local root=selPl.Character:FindFirstChild("HumanoidRootPart")
-        if root then root.AssemblyLinearVelocity=Vector3.new(math.random(-1,1)*9999,9999,math.random(-1,1)*9999) end
-    end)
-    spacer(L,4)
-    local plList=ni("Frame",{Size=UDim2.new(1,0,0,0),BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y},L)
-    ni("UIListLayout",{Padding=UDim.new(0,3)},plList)
-    local function rebuildList()
-        for _,ch in ipairs(plList:GetChildren()) do if not ch:IsA("UIListLayout") then ch:Destroy() end end
-        for _,pl in ipairs(Players:GetPlayers()) do
-            if pl==LP then continue end
-            local pb=ni("TextButton",{Text=pl.DisplayName.."  @"..pl.Name,Font=Enum.Font.Gotham,TextSize=10,TextColor3=T.text,BackgroundColor3=T.cbOff,BorderSizePixel=0,Size=UDim2.new(1,0,0,26),TextXAlignment=Enum.TextXAlignment.Left,AutoButtonColor=false},plList)
-            mkCorner(5,pb); mkPad(8,0,0,0,pb)
-            pb.MouseEnter:Connect(function() tw(pb,{BackgroundColor3=T.accentDim},0.08) end)
-            pb.MouseLeave:Connect(function() tw(pb,{BackgroundColor3=selPl==pl and T.accentDim or T.cbOff},0.08) end)
-            pb.MouseButton1Click:Connect(function()
-                selPl=pl
-                for _,c in ipairs(plList:GetChildren()) do if c:IsA("TextButton") then tw(c,{BackgroundColor3=T.cbOff},0.08) end end
-                tw(pb,{BackgroundColor3=T.accentDim},0.08)
-                local hum=pl.Character and pl.Character:FindFirstChild("Humanoid")
-                local ping="?"; pcall(function() ping=math.floor(pl:GetNetworkPing()*1000) end)
-                infoName.Text=pl.DisplayName.." (@"..pl.Name..")"
-                infoSub.Text=string.format("hp: %s/%s  •  ping: %sms  •  team: %s",hum and math.floor(hum.Health) or "?",hum and math.floor(hum.MaxHealth) or "?",ping,pl.Team and pl.Team.Name or "none")
-                infoPanel.Size=UDim2.new(1,0,0,68); infoPanel.Visible=true
-            end)
-        end
-    end
-    rebuildList()
-    Players.PlayerAdded:Connect(function() task.delay(0.2,rebuildList) end)
-    Players.PlayerRemoving:Connect(function() task.delay(0.2,rebuildList) end)
-    -- right col
-    secHdr(R,"appearance")
-    sldRow(R,"transparency",0,100,0,function(v) return v.."%" end,function(v)
-        local c=LP.Character; if not c then return end
-        for _,p in ipairs(c:GetDescendants()) do if p:IsA("BasePart") then p.LocalTransparencyModifier=v/100 end end
-    end)
-    dropRow(R,"body color",{"Default","Black","White","Red","Blue","Purple","Pink","Green"},"Default",function(v)
-        local c=LP.Character; if not c then return end
-        local cm={Black=BrickColor.new("Really black"),White=BrickColor.new("White"),Red=BrickColor.new("Bright red"),Blue=BrickColor.new("Bright blue"),Purple=BrickColor.new("Bright violet"),Pink=BrickColor.new("Hot pink"),Green=BrickColor.new("Bright green")}
-        if not cm[v] then return end
-        for _,p in ipairs(c:GetChildren()) do if p:IsA("BasePart") then p.BrickColor=cm[v] end end
-    end)
-    cbRow(R,"remove accessories",false,function(v)
-        if not v then return end
-        local c=LP.Character; if not c then return end
-        for _,a in ipairs(c:GetChildren()) do if a:IsA("Accessory") then a:Destroy() end end
-    end)
-end
+local KBWGui
 
 -- ═══════════════════════════════════════
 --   THEMES
@@ -972,7 +568,6 @@ local THEMES={
 local function applyTheme(name)
     local th=THEMES[name]; if not th then return end
     for k,v in pairs(th) do T[k]=v end
-    -- safe defaults for any missing keys
     T.inputBg=T.inputBg or T.navBg; T.dropBg=T.dropBg or T.navBg
     T.dropHover=T.dropHover or T.accentDim; T.scrollbar=T.scrollbar or T.accent
     T.tabHover=T.tabHover or T.accentDim; T.accentHover=T.accentHover or T.accent
@@ -981,7 +576,6 @@ local function applyTheme(name)
         tw(MF,{BackgroundColor3=T.bg},0.15)
         mfStroke.Color=T.border
         if NavBar then tw(NavBar,{BackgroundColor3=T.navBg},0.15) end
-        -- recolor watermark to match new theme brand color
         if WMFrame then
             for _,l in ipairs(WMFrame:GetDescendants()) do
                 if l:IsA("TextLabel") then tw(l,{TextColor3=T.brand},0.15) end
@@ -991,320 +585,4 @@ local function applyTheme(name)
     refreshTheme()
 end
 
--- ═══════════════════════════════════════
---   TAB: OPTIONS
--- ═══════════════════════════════════════
-local function buildOptions()
-    local L,R=tabPages["options"].L,tabPages["options"].R
-    secHdr(L,"ui")
-    local themeNames={}; for k in pairs(THEMES) do table.insert(themeNames,k) end; table.sort(themeNames)
-    dropRow(L,"theme",themeNames,"lunatic (default)",function(v) applyTheme(v) end)
-    spacer(L,2)
-    dropRow(L,"nav position",{"top","left","right","bottom"},"top",function(v)
-        T.navMode=v; task.defer(buildNavLayout)
-    end)
-    sldRow(L,"ui opacity",0,100,100,function(v) return v.."%" end,function(v) MF.BackgroundTransparency=1-(v/100) end)
-    sldRow(L,"blur",0,24,8,nil,function(v) T.blurAmt=v; blurFX.Size=v end)
-    spacer(L,2)
-    secHdr(L,"theme colors")
-    colRow(L,"background",T.bg,function(c) T.bg=c; tw(MF,{BackgroundColor3=c},0.1) end,"bg")
-    colRow(L,"nav bg",T.navBg,function(c) T.navBg=c; if NavBar then tw(NavBar,{BackgroundColor3=c},0.1) end end,"navBg")
-    colRow(L,"border",T.border,function(c) T.border=c; mfStroke.Color=c end,"border")
-    colRow(L,"accent",T.accent,function(c) T.accent=c; refreshTheme() end,"accent")
-    colRow(L,"text",T.text,function(c) T.text=c; refreshTheme() end,"text")
-    spacer(L,2)
-    secHdr(L,"toggle keybind")
-    local kf=ni("Frame",{Size=UDim2.new(1,0,0,26),BackgroundColor3=T.inputBg,BorderSizePixel=0},L)
-    mkCorner(T.radius,kf); mkStroke(T.border,1,kf)
-    local kl=ni("TextLabel",{Text="[ "..(uiToggleKB and getKeyName(uiToggleKB.key) or "RightShift").." ]",Font=Enum.Font.Gotham,TextSize=10,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=2},kf)
-    local kListen=false
-    ni("TextButton",{Text="",BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=3},kf).MouseButton1Click:Connect(function()
-        if kListen then return end; kListen=true; kl.Text="[ press key... ]"; kl.TextColor3=T.textDim
-        local cc; cc=UserInputService.InputBegan:Connect(function(inp)
-            if inp.UserInputType==Enum.UserInputType.Keyboard then
-                uiToggleKB.key=inp.KeyCode; kl.Text="[ "..inp.KeyCode.Name.." ]"; kl.TextColor3=T.text; kListen=false; cc:Disconnect()
-            end
-        end)
-    end)
-    -- right col
-    secHdr(R,"checkbox colors")
-    colRow(R,"checked",T.cbOn,function(c) T.cbOn=c; refreshTheme() end)
-    colRow(R,"unchecked",T.cbOff,function(c) T.cbOff=c; refreshTheme() end)
-    spacer(R,2)
-    secHdr(R,"slider colors")
-    colRow(R,"track",T.slTrack,function(c) T.slTrack=c; refreshTheme() end)
-    colRow(R,"fill",T.slFill,function(c) T.slFill=c; refreshTheme() end)
-    colRow(R,"knob",T.slKnob,function(c) T.slKnob=c; refreshTheme() end)
-    spacer(R,2)
-    secHdr(R,"effects")
-    cbRow(R,"blur overlay",true,function(v) tw(blurFX,{Size=v and T.blurAmt or 0},0.3) end)
-    cbRow(R,"dark overlay",true,function(v) tw(darkOverlay,{BackgroundTransparency=v and (1-T.overlayAlpha) or 1},0.3) end)
-    spacer(R,6)
-    secHdr(R,"danger zone")
-    local _unloadState=0; local _unloadTask=nil
-    local unloadBtn=ni("TextButton",{Text="unload",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.textDim,BackgroundColor3=T.cbOff,BorderSizePixel=0,Size=UDim2.new(1,0,0,28),AutoButtonColor=false},R)
-    mkCorner(T.radius,unloadBtn); mkStroke(T.border,1,unloadBtn)
-    local function resetUnloadBtn()
-        _unloadState=0
-        if _unloadTask then task.cancel(_unloadTask); _unloadTask=nil end
-        pcall(function()
-            unloadBtn.Text="unload"
-            unloadBtn.BackgroundColor3=T.cbOff
-            unloadBtn.TextColor3=T.textDim
-        end)
-    end
-    resetUnloadBtn()
-    unloadBtn.MouseButton1Click:Connect(function()
-        if _unloadState==0 then
-            _unloadState=1
-            unloadBtn.BackgroundColor3=T.accentDim
-            unloadBtn.TextColor3=T.text
-            local t=3; unloadBtn.Text="are you sure?  ("..t.."s)"
-            if _unloadTask then task.cancel(_unloadTask) end
-            _unloadTask=task.spawn(function()
-                while t>0 do
-                    task.wait(1); t=t-1
-                    pcall(function() unloadBtn.Text="are you sure?  ("..t.."s)" end)
-                end
-                resetUnloadBtn()  -- countdown expired → go back to idle
-            end)
-        elseif _unloadState==1 then
-            -- confirmed
-            if _unloadTask then task.cancel(_unloadTask); _unloadTask=nil end
-            pcall(function() unloadBtn.Text="unloading..." end)
-            task.delay(0.1,function()
-                pcall(function() SGui:Destroy() end)
-                pcall(function() if KBWGui then KBWGui:Destroy() end end)
-                UserInputService.MouseBehavior=Enum.MouseBehavior.Default
-                UserInputService.MouseIconEnabled=true
-            end)
-        end
-    end)
-    -- clicking elsewhere during confirm resets to idle
-    UserInputService.InputBegan:Connect(function(i)
-        if i.UserInputType~=Enum.UserInputType.MouseButton1 then return end
-        if _unloadState~=1 then return end
-        local mp=UserInputService:GetMouseLocation()
-        local ap=unloadBtn.AbsolutePosition; local as=unloadBtn.AbsoluteSize
-        if not(mp.X>=ap.X and mp.X<=ap.X+as.X and mp.Y>=ap.Y and mp.Y<=ap.Y+as.Y) then
-            resetUnloadBtn()
-        end
-    end)
-end
-
--- ═══════════════════════════════════════
---   TAB: CONFIGS
--- ═══════════════════════════════════════
-local CONFIG_PATH="lunatic_configs/"
-local function getConfigData()
-    return {
-        AB={Enabled=AB.Enabled,Mode=AB.Mode,VisCheck=AB.VisCheck,TeamCheck=AB.TeamCheck,FOVSize=AB.FOVSize,ShowFOV=AB.ShowFOV,FOVMouse=AB.FOVMouse,Smooth=AB.Smooth,StickyAim=AB.StickyAim,Prediction=AB.Prediction,PredX=AB.PredX,PredY=AB.PredY,DistLimit=AB.DistLimit},
-        SA={Enabled=SA.Enabled,FOVSize=SA.FOVSize,ShowFOV=SA.ShowFOV,TeamCheck=SA.TeamCheck,FOVMouse=SA.FOVMouse,Tracer=SA.Tracer,Prediction=SA.Prediction,PredX=SA.PredX,PredY=SA.PredY,DistLimit=SA.DistLimit},
-        TB={Enabled=TB.Enabled,Delay=TB.Delay,HitboxMult=TB.HitboxMult,TeamCheck=TB.TeamCheck,VisCheck=TB.VisCheck},
-        ESP={Enabled=ESP.Enabled,BoxMode=ESP.BoxMode,BoxEnabled=ESP.BoxEnabled,BoxFill=ESP.BoxFill,Names=ESP.Names,NameMode=ESP.NameMode,Health=ESP.Health,Distance=ESP.Distance,Tracer=ESP.Tracer,Skeleton=ESP.Skeleton,HeadDot=ESP.HeadDot,HeadDotFill=ESP.HeadDotFill,Weapon=ESP.Weapon,DistLimit=ESP.DistLimit},
-        Chams={Enabled=Chams.Enabled,ThroughWalls=Chams.ThroughWalls,FillTransp=Chams.FillTransp,OutTransp=Chams.OutTransp},
-        WalkMod={Enabled=WalkMod.Enabled,Speed=WalkMod.Speed},
-        CFrameMove={Enabled=CFrameMove.Enabled,Speed=CFrameMove.Speed},
-        CFrameFly={Enabled=CFrameFly.Enabled,Speed=CFrameFly.Speed},
-        SpinBot={Enabled=SpinBot.Enabled,Speed=SpinBot.Speed},
-        WorldFX={Saturation=WorldFX.Saturation,Brightness=WorldFX.Brightness,NoFog=WorldFX.NoFog,Fullbright=WorldFX.Fullbright,TimeOfDay=WorldFX.TimeOfDay,WeatherMode=WorldFX.WeatherMode},
-    }
-end
-local function saveConfig(name)
-    pcall(function()
-        if not isfolder(CONFIG_PATH) then makefolder(CONFIG_PATH) end
-        writefile(CONFIG_PATH..name..".json",HttpService:JSONEncode(getConfigData()))
-    end)
-end
-local function listConfigs()
-    local ok,files=pcall(listfiles,CONFIG_PATH)
-    if not ok then return {} end
-    local configs={}
-    for _,f in ipairs(files) do
-        if f:sub(-5)==".json" then local n=f:match("([^/\\]+)%.json$"); if n then table.insert(configs,n) end end
-    end
-    return configs
-end
-local function buildConfigs()
-    local L,R=tabPages["configs"].L,tabPages["configs"].R
-    secHdr(L,"save config")
-    local nameInp=ni("TextBox",{Text="",PlaceholderText="config name...",Font=Enum.Font.Gotham,TextSize=10,TextColor3=T.text,PlaceholderColor3=T.textDim,BackgroundColor3=T.inputBg,BorderSizePixel=0,Size=UDim2.new(1,0,0,26),TextXAlignment=Enum.TextXAlignment.Left,ClearTextOnFocus=false},L)
-    mkCorner(5,nameInp); mkStroke(T.border,1,nameInp); mkPad(6,0,0,0,nameInp)
-    local saveBtn=ni("TextButton",{Text="save config",Font=Enum.Font.GothamBold,TextSize=10,TextColor3=T.text,BackgroundColor3=T.accent,BorderSizePixel=0,Size=UDim2.new(1,0,0,26),AutoButtonColor=false},L)
-    mkCorner(5,saveBtn)
-    saveBtn.MouseEnter:Connect(function() tw(saveBtn,{BackgroundColor3=T.accentHover or T.accent},0.07) end)
-    saveBtn.MouseLeave:Connect(function() tw(saveBtn,{BackgroundColor3=T.accent},0.07) end)
-    saveBtn.MouseButton1Click:Connect(function()
-        local n=nameInp.Text; if n=="" then n="config_"..os.time() end
-        saveConfig(n); showNotif("saved: "..n,Color3.fromRGB(80,220,120))
-    end)
-    spacer(L,4)
-    secHdr(L,"info")
-    ni("TextLabel",{Text="configs save all toggle states, slider values,\nesp settings and combat settings.\nfiles save to: lunatic_configs/",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,40),TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left},L)
-
-    secHdr(R,"load config")
-    local cfgList=ni("Frame",{Size=UDim2.new(1,0,0,0),BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y},R)
-    ni("UIListLayout",{Padding=UDim.new(0,3)},cfgList)
-    local refreshBtn=ni("TextButton",{Text="↻  refresh list",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.textDim,BackgroundColor3=T.cbOff,BorderSizePixel=0,Size=UDim2.new(1,0,0,24),AutoButtonColor=false},R)
-    mkCorner(5,refreshBtn)
-    local function refreshCfgList()
-        for _,ch in ipairs(cfgList:GetChildren()) do if not ch:IsA("UIListLayout") then ch:Destroy() end end
-        local configs=listConfigs()
-        if #configs==0 then
-            ni("TextLabel",{Text="no configs found",Font=Enum.Font.Gotham,TextSize=9,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,0,22)},cfgList); return
-        end
-        for _,name in ipairs(configs) do
-            local row=ni("Frame",{Size=UDim2.new(1,0,0,26),BackgroundTransparency=1},cfgList)
-            ni("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,3)},row)
-            local lb=ni("TextButton",{Text=name,Font=Enum.Font.Gotham,TextSize=10,TextColor3=T.text,BackgroundColor3=T.cbOff,BorderSizePixel=0,Size=UDim2.new(1,-28,1,0),TextXAlignment=Enum.TextXAlignment.Left,AutoButtonColor=false},row)
-            mkCorner(5,lb); mkPad(6,0,0,0,lb)
-            lb.MouseEnter:Connect(function() tw(lb,{BackgroundColor3=T.accentDim},0.08) end)
-            lb.MouseLeave:Connect(function() tw(lb,{BackgroundColor3=T.cbOff},0.08) end)
-            lb.MouseButton1Click:Connect(function()
-                pcall(function()
-                    local raw=readfile(CONFIG_PATH..name..".json")
-                    local data=HttpService:JSONDecode(raw)
-                    if data.AB        then for k,v in pairs(data.AB)        do pcall(function() AB[k]=v        end) end end
-                    if data.SA        then for k,v in pairs(data.SA)        do pcall(function() SA[k]=v        end) end end
-                    if data.TB        then for k,v in pairs(data.TB)        do pcall(function() TB[k]=v        end) end end
-                    if data.ESP       then for k,v in pairs(data.ESP)       do pcall(function() ESP[k]=v       end) end end
-                    if data.Chams     then for k,v in pairs(data.Chams)     do pcall(function() Chams[k]=v     end) end end
-                    if data.WalkMod   then WalkMod.Enabled=data.WalkMod.Enabled; WalkMod.Speed=data.WalkMod.Speed end
-                    if data.CFrameMove then CFrameMove.Enabled=data.CFrameMove.Enabled; CFrameMove.Speed=data.CFrameMove.Speed end
-                    if data.CFrameFly  then CFrameFly.Enabled=data.CFrameFly.Enabled;   CFrameFly.Speed=data.CFrameFly.Speed   end
-                    if data.SpinBot   then SpinBot.Enabled=data.SpinBot.Enabled; SpinBot.Speed=data.SpinBot.Speed end
-                    showNotif("loaded: "..name,Color3.fromRGB(80,220,120))
-                end)
-            end)
-            local delBtn=ni("TextButton",{Text="✕",Font=Enum.Font.GothamBold,TextSize=9,TextColor3=Color3.fromRGB(220,80,80),BackgroundColor3=T.cbOff,BorderSizePixel=0,Size=UDim2.new(0,24,1,0),AutoButtonColor=false},row)
-            mkCorner(5,delBtn)
-            delBtn.MouseButton1Click:Connect(function()
-                pcall(function() delfile(CONFIG_PATH..name..".json") end); refreshCfgList()
-            end)
-        end
-    end
-    refreshBtn.MouseButton1Click:Connect(refreshCfgList)
-    refreshCfgList()
-end
-
--- ═══════════════════════════════════════
---   BUILD ALL TABS
--- ═══════════════════════════════════════
-buildCombat()
-pcall(buildVisuals)
-buildMod()
-buildPlayers()
-buildOptions()
-buildConfigs()
-buildNavLayout()   -- must come AFTER all pages are built
-
--- ═══════════════════════════════════════
---   POST-BUILD: resize grip + keybind widget + entry anim
--- ═══════════════════════════════════════
-task.spawn(function()
-
--- ─── mouse behavior: restore when UI visibility changes ──────────────
--- Fixes "mouse stuck after opening/closing UI"
-MF:GetPropertyChangedSignal("Visible"):Connect(function()
-    -- Always release mouse lock when UI comes back into view
-    if MF.Visible then
-        UserInputService.MouseBehavior=Enum.MouseBehavior.Default
-    end
-end)
--- Also hook the toggle key handler via polling so spectate lock is released on hide
-local _prevVis=true
-RunService.Heartbeat:Connect(function()
-    local v=MF.Visible
-    if v~=_prevVis then
-        _prevVis=v
-        if not v then
-            -- UI hidden — ensure mouse is free for gameplay
-            task.defer(function() UserInputService.MouseBehavior=Enum.MouseBehavior.Default end)
-        else
-            UserInputService.MouseBehavior=Enum.MouseBehavior.Default
-        end
-    end
-end)
-local resizeGrip=ni("TextButton",{Text="",BackgroundTransparency=1,Size=UDim2.new(0,22,0,22),Position=UDim2.new(1,-22,1,-22),BorderSizePixel=0,ZIndex=14,AutoButtonColor=false},MF)
-ni("TextLabel",{Text="⌟",Font=Enum.Font.GothamBold,TextSize=14,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),TextXAlignment=Enum.TextXAlignment.Right,TextYAlignment=Enum.TextYAlignment.Bottom,ZIndex=14},resizeGrip)
-local _resizing=false
-resizeGrip.MouseButton1Down:Connect(function() _resizing=true end)
-UserInputService.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then _resizing=false end end)
-UserInputService.InputChanged:Connect(function(i)
-    if _resizing and i.UserInputType==Enum.UserInputType.MouseMovement then
-        local mp=UserInputService:GetMouseLocation(); local ap=MF.AbsolutePosition
-        MF.Size=UDim2.new(0,math.max(500,mp.X-ap.X),0,math.max(350,mp.Y-ap.Y))
-    end
-end)
-
--- ─── keybind widget (floating) ───────
-KBWGui=ni("ScreenGui",{Name="lunatic_kbw",ResetOnSpawn=false,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,DisplayOrder=998},nil)
-pcall(function() KBWGui.Parent=CoreGui end)
-if not KBWGui.Parent then KBWGui.Parent=PGui end
-
-local KBW=ni("Frame",{Size=UDim2.new(0,190,0,32),Position=UDim2.new(1,-212,0,52),BackgroundColor3=T.navBg,BackgroundTransparency=0.10,BorderSizePixel=0,ZIndex=3},KBWGui)
-mkCorner(9,KBW); mkStroke(T.border,1,KBW)
-ni("UIGradient",{Color=ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(26,10,50)),ColorSequenceKeypoint.new(1,Color3.fromRGB(7,5,15))},Rotation=140},KBW)
-ni("TextLabel",{Text="active binds",Font=Enum.Font.GothamBold,TextSize=9,TextColor3=T.brand,BackgroundTransparency=1,Size=UDim2.new(1,-4,0,20),Position=UDim2.new(0,8,0,2),ZIndex=4,TextXAlignment=Enum.TextXAlignment.Left},KBW)
-ni("Frame",{Size=UDim2.new(1,-14,0,1),Position=UDim2.new(0,7,0,21),BackgroundColor3=T.sep,BorderSizePixel=0,ZIndex=4},KBW)
-local kbwList=ni("Frame",{Size=UDim2.new(1,0,1,-26),Position=UDim2.new(0,0,0,26),BackgroundTransparency=1,ZIndex=4,ClipsDescendants=true},KBW)
-ni("UIListLayout",{Padding=UDim.new(0,1)},kbwList); mkPad(7,7,2,3,kbwList)
-
-local _wDrag=false; local _wOx,_wOy=0,0
-KBW.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then _wDrag=true;_wOx=i.Position.X-KBW.AbsolutePosition.X;_wOy=i.Position.Y-KBW.AbsolutePosition.Y end end)
-KBW.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then _wDrag=false end end)
-UserInputService.InputChanged:Connect(function(i)
-    if _wDrag and i.UserInputType==Enum.UserInputType.MouseMovement then KBW.Position=UDim2.new(0,i.Position.X-_wOx,0,i.Position.Y-_wOy) end
-end)
-
--- poll active binds every 0.1s
-task.spawn(function()
-    while KBW.Parent do
-        task.wait(0.1)
-        for _,ch in ipairs(kbwList:GetChildren()) do
-            if not ch:IsA("UIListLayout") and not ch:IsA("UIPadding") then ch:Destroy() end
-        end
-        local count=0
-        for _,e in ipairs(KBRegistry) do
-            if e.name=="Toggle UI" then continue end
-            local active=(e.mode=="Always") or ((e.mode=="Toggle" or e.mode=="Hold") and e.state)
-            if not active then continue end
-            local row=ni("Frame",{Size=UDim2.new(1,0,0,15),BackgroundTransparency=1,ZIndex=5},kbwList)
-            local dot=ni("Frame",{Size=UDim2.new(0,5,0,5),Position=UDim2.new(0,0,0.5,-2),BackgroundColor3=T.accent,BorderSizePixel=0,ZIndex=6},row); mkCorner(3,dot)
-            ni("TextLabel",{Text=e.name,Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.text,BackgroundTransparency=1,Size=UDim2.new(0.64,0,1,0),Position=UDim2.new(0,9,0,0),TextXAlignment=Enum.TextXAlignment.Left,ZIndex=6},row)
-            ni("TextLabel",{Text=e.mode:lower(),Font=Enum.Font.GothamBold,TextSize=8,TextColor3=T.tabIdle,BackgroundTransparency=1,Size=UDim2.new(0.36,0,1,0),Position=UDim2.new(0.64,0,0,0),TextXAlignment=Enum.TextXAlignment.Right,ZIndex=6},row)
-            count=count+1
-        end
-        if count==0 then
-            local row=ni("Frame",{Size=UDim2.new(1,0,0,15),BackgroundTransparency=1,ZIndex=5},kbwList)
-            ni("TextLabel",{Text="nothing active",Font=Enum.Font.Gotham,TextSize=8,TextColor3=T.textDim,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),Position=UDim2.new(0,4,0,0),TextXAlignment=Enum.TextXAlignment.Left,ZIndex=6},row)
-            count=1
-        end
-        KBW.Size=UDim2.new(0,190,0,28+count*16)
-    end
-end)
-
--- ─── anti-afk loop ───────────────────
-task.spawn(function()
-    while true do
-        task.wait(55)
-        if MiscMov.AntiAFK then pcall(function()
-            local vim=game:GetService("VirtualInputManager")
-            vim:SendKeyEvent(true,Enum.KeyCode.Space,false,game); task.wait(0.1)
-            vim:SendKeyEvent(false,Enum.KeyCode.Space,false,game)
-        end) end
-    end
-end)
-
--- ─── entry animation ─────────────────
-MF.Size=UDim2.new(0,WIN_W,0,WIN_H-60)
-MF.Position=UDim2.new(0.5,-WIN_W/2,0.5,-(WIN_H-60)/2+28)
-MF.BackgroundTransparency=0.3
-tw(MF,{BackgroundTransparency=0,Size=UDim2.new(0,WIN_W,0,WIN_H),Position=UDim2.new(0.5,-WIN_W/2,0.5,-WIN_H/2)},0.48,Enum.EasingStyle.Back)
-tw(blurFX,{Size=T.blurAmt},0.48)
-tw(darkOverlay,{BackgroundTransparency=1-T.overlayAlpha},0.48)
-task.delay(0.14,function()
-    UserInputService.MouseIconEnabled=false; dotCursor.Visible=true
-end)
-
-end) -- end task.spawn
+print("[lunatic.cc integrated] part 2 loaded ✓")
